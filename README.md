@@ -1,52 +1,84 @@
-# 🚀 RocketQR (WhatsApp Cloud API Version)
+# 🚀 RocketPay
 
-Este bot permite a vendedores enviar links de cobro en USDC a través de WhatsApp usando la API oficial de Meta (WhatsApp Cloud API).
+**RocketPAY** es un sistema de cobro automatizado vía WhatsApp que permite a trabajadores informales y pequeños comerciantes recibir pagos en XLM (Lumens) de forma simple, sin fricción y con verificación automática en la blockchain de Stellar.
 
-## 🔧 Requisitos
+Millones de personas sin acceso a infraestructura bancaria necesitan una forma simple y directa de cobrar digitalmente.
 
-- Cuenta en Meta for Developers
-- Token de acceso (WhatsApp Token)
-- ID del número de teléfono de prueba (Phone Number ID)
-- Verificación del webhook con un Verify Token
+**RocketPAY convierte WhatsApp en una herramienta de cobro.** Con un solo mensaje, el bot genera un link de pago, un código QR y verifica la transacción en Stellar.
 
-## 🛠 Instalación
+## ✨ Características
 
-1. Instalar dependencias:
+- **Bot de WhatsApp** con API oficial (WABA)
+- **URI de pago** `web+stellar:pay`
+- **Código QR automático**
+- **Verificación on-chain** vía Horizon
+- **Notificación instantánea**
+- **Generación automática de facturas**
 
+## 🔄 Flujo del Usuario
+
+1. El vendedor escribe a modo de mensaje el comando `/cobrar` y a continuación el monto, como por ejemplo `100` en WhatsApp
+2. El bot responde con el URI de pago y una imagen JPG con un QR
+3. El comprador paga
+4. El bot verifica el pago, notifica al vendedor y le crea una factura para enviarle al comprador
+
+## 💡 ¿Por qué XLM?
+
+- **Rápido** (<5 seg)
+- **Barato** (<0.00001 XLM)
+- **Accesible y global**
+
+## 📊 Estado actual
+
+- ✅ **MVP funcional** con WhatsApp + Stellar
+- 🔄 **En validación** con usuarios reales
+
+## 🚀 Próximos pasos
+
+- 📋 Historial de pagos
+- 🏆 Reputación e identidad descentralizada
+- 📦 Generación automática de etiqueta con información para envío de productos
+
+---
+
+**RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
+
+## 🛠️ Instalación y Configuración
+
+### Requisitos
+- Node.js
+- Cuenta de WhatsApp Business API
+- Dirección Stellar para recibir pagos
+
+### Variables de Entorno
+```env
+WHATSAPP_TOKEN=tu_token_de_whatsapp
+PHONE_NUMBER_ID=tu_phone_number_id
+VERIFY_TOKEN=tu_token_de_verificacion
+ADMIN_PHONE_NUMBER=tu_numero_para_notificaciones
 ```
+
+### Instalación
+```bash
 npm install
-```
-
-2. Crear un archivo `.env` con:
-
-```
-WHATSAPP_TOKEN=<TU TOKEN DE META>
-VERIFY_TOKEN=rocketqrverify
-PUBLIC_KEY=<TU CLAVE PÚBLICA DE STELLAR>
-PHONE_NUMBER_ID=<ID DE TELÉFONO DE PRUEBA>
-```
-
-3. Ejecutar el bot:
-
-```
 node index.js
 ```
 
-4. Publicar tu bot con `ngrok`:
+### Uso
+1. Inicia el bot: `node index.js`
+2. Expón el puerto: `npx localtunnel --port 3000`
+3. Configura el webhook en WhatsApp Business API
+4. Envía `/cobrar [monto]` al bot
 
-```
-npx ngrok http 3000
-```
+## 📱 Comandos Disponibles
 
-5. Configurar tu Webhook en Meta:
+- `/cobrar [monto]` - Genera un link de pago y QR para el monto especificado
 
-- URL: `https://TU_URL_DE_NGROK/webhook`
-- Verify Token: `rocketqrverify`
-- Eventos: `messages`, `message_status`
+## 🔗 Tecnologías
 
-6. Probar enviando `/cobrar 10` desde tu número de prueba.
-
-## ✨ Resultado
-
-El bot te enviará un link de cobro con formato URI de Stellar compatible con billeteras.
+- **WhatsApp Business API** - Comunicación con usuarios
+- **Stellar Blockchain** - Procesamiento de pagos
+- **Node.js** - Backend del bot
+- **Express.js** - Servidor web
+- **QRCode** - Generación de códigos QR
 
