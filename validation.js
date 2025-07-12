@@ -1,4 +1,3 @@
-
 // monitor.js
 import StellarSdk from "stellar-sdk";
 import fetch from "node-fetch"; // Necesario para node 18- si no usas global fetch
@@ -57,6 +56,7 @@ async function checkPayments() {
 
       // Obtener el TXID
       const txId = record.transaction_hash;
+      console.log(txId);
 
       // Obtener el memo de la transacción (requiere cargar la transacción)
       const transaction = await server.transactions().transaction(txId).call();
