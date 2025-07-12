@@ -6,11 +6,14 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
+const StellarSdk = require('stellar-sdk');
+const puppeteer = require('puppeteer');
 const app = express();
 
 app.use(bodyParser.json());
 
-// Configurar Stellar
+// Configurar Stellar SDK
+const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
 const STELLAR_ADDRESS = 'GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4';
 
 // Almacenar pagos pendientes
@@ -125,6 +128,7 @@ async function generateInvoice(paymentData) {
           width: 400px; 
           margin: 20px; 
           background: white;
+          color: black;
         }
         .header { 
           text-align: center; 
@@ -211,14 +215,137 @@ async function generateInvoice(paymentData) {
   const filename = `invoice_${Date.now()}.png`;
   
   try {
-    // Usar puppeteer o similar para convertir HTML a imagen
-    // Por ahora, crearemos un archivo de texto como placeholder
-    fs.writeFileSync(filename.replace('.png', '.txt'), htmlContent);
-    console.log(`Factura generada: ${filename}`);
+    // Usar Puppeteer para convertir HTML a imagen PNG
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    await page.setContent(htmlContent);
+    await page.setViewport({ width: 440, height: 600 });
+    
+    // Generar la imagen
+    await page.screenshot({
+      path: filename,
+      type: 'png',
+      fullPage: true
+    });
+    
+    await browser.close();
+    console.log(`🧾 Factura generada: ${filename}`);
     return filename;
   } catch (error) {
     console.error('Error generando factura:', error);
-    return null;
+    // Fallback: crear archivo de texto
+    const textFilename = `invoice_${Date.now()}.txt`;
+    fs.writeFileSync(textFilename, htmlContent);
+    return textFilename;
+  }
+}
+
+// Función para monitorear transacciones Stellar
+async function monitorTransactions() {
+  try {
+    console.log('🔍 Monitoreando transacciones Stellar...');
+    
+    // Obtener transacciones recientes
+    const payments = await server.payments()
+      .forAccount(STELLAR_ADDRESS)
+      .order('desc')
+      .limit(10)
+      .call();
+
+    for (const payment of payments.records) {
+      if (payment.type === 'payment' && 
+          payment.to === STELLAR_ADDRESS &&
+          payment.asset_type === 'native') { // XLM
+        
+        const paymentKey = `${payment.from}_${payment.amount}_RocketQR_Payment`;
+        
+        // Verificar si es un pago pendiente
+        if (pendingPayments.has(paymentKey)) {
+          const pendingPayment = pendingPayments.get(paymentKey);
+          
+          console.log(`✅ Pago confirmado: ${paymentKey}`);
+          console.log(`💰 Monto: ${payment.amount} XLM`);
+          console.log(`👤 Remitente: ${payment.from}`);
+          console.log(`🔗 Hash: ${payment.transaction_hash}`);
+          
+          // Generar factura
+          const invoicePath = await generateInvoice({
+            amount: payment.amount,
+            sender: payment.from,
+            transactionHash: payment.transaction_hash,
+            timestamp: new Date(payment.created_at).getTime(),
+            memo: payment.memo || 'RocketQR_Payment'
+          });
+          
+          // Enviar notificación al administrador
+          await sendPaymentNotification(pendingPayment, payment, invoicePath);
+          
+          // Remover de pagos pendientes
+          pendingPayments.delete(paymentKey);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error monitoreando transacciones:', error);
+  }
+}
+
+// Función para enviar notificación de pago confirmado
+async function sendPaymentNotification(pendingPayment, confirmedPayment, invoicePath) {
+  try {
+    const adminNumber = process.env.ADMIN_PHONE_NUMBER;
+    if (!adminNumber) {
+      console.log('⚠️ ADMIN_PHONE_NUMBER no configurado');
+      return;
+    }
+    
+    // Formatear número del administrador
+    let formattedAdminNumber = adminNumber;
+    if (adminNumber === '5492235397307') {
+      formattedAdminNumber = '54223155397307';
+    }
+    
+    // Mensaje de confirmación
+    const confirmationMessage = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n👤 Remitente: ${confirmedPayment.from}\n🔗 Hash: ${confirmedPayment.transaction_hash}\n⏰ Fecha: ${new Date(confirmedPayment.created_at).toLocaleString('es-AR')}\n\n📝 Factura generada y lista para enviar`;
+    
+    // Enviar mensaje de confirmación
+    await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, {
+      messaging_product: "whatsapp",
+      to: formattedAdminNumber,
+      type: "text",
+      text: { body: confirmationMessage }
+    }, {
+      headers: {
+        Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // Si hay factura, enviarla también
+    if (invoicePath && fs.existsSync(invoicePath)) {
+      await sendImageToWhatsApp(
+        process.env.PHONE_NUMBER_ID,
+        formattedAdminNumber,
+        invoicePath,
+        `🧾 Factura - Pago de ${confirmedPayment.amount} XLM`
+      );
+      
+      // Limpiar archivo de factura
+      setTimeout(() => {
+        if (fs.existsSync(invoicePath)) {
+          fs.unlinkSync(invoicePath);
+        }
+      }, 60000); // Eliminar después de 1 minuto
+    }
+    
+    console.log('📱 Notificación de pago enviada al administrador');
+    
+  } catch (error) {
+    console.error('Error enviando notificación:', error);
   }
 }
 
@@ -339,8 +466,8 @@ app.listen(3000, () => {
   console.log('RocketQR bot running on http://localhost:3000');
   
   // Iniciar monitoreo de transacciones cada 30 segundos
-  // setInterval(monitorTransactions, 30000); // This line is removed as per the edit hint
+  setInterval(monitorTransactions, 30000);
   
   // Monitoreo inicial
-  // monitorTransactions(); // This line is removed as per the edit hint
+  monitorTransactions();
 });
