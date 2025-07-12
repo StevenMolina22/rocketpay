@@ -6,14 +6,13 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
-const StellarSdk = require('stellar-sdk');
-const puppeteer = require('puppeteer');
 const app = express();
 
 app.use(bodyParser.json());
 
-// Configurar Stellar SDK
-const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+// Configurar Stellar (temporalmente deshabilitado)
+// const StellarSdk = require('stellar-sdk');
+// const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
 const STELLAR_ADDRESS = 'GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4';
 
 // Almacenar pagos pendientes
@@ -113,7 +112,8 @@ async function sendImageToWhatsApp(phoneNumberId, to, imagePath, caption) {
   }
 }
 
-// Función para generar factura/ticket
+// Función para generar factura/ticket (temporalmente deshabilitada)
+/*
 async function generateInvoice(paymentData) {
   const { amount, sender, transactionHash, timestamp, memo } = paymentData;
   
@@ -145,55 +145,51 @@ async function generateInvoice(paymentData) {
           font-size: 14px; 
           margin: 5px 0;
         }
+        .details { 
+          margin: 15px 0;
+        }
         .row { 
           display: flex; 
           justify-content: space-between; 
           margin: 8px 0;
-          font-size: 14px;
         }
         .total { 
           border-top: 1px solid #000; 
-          font-weight: bold; 
-          font-size: 16px;
-          margin-top: 15px;
+          margin-top: 15px; 
           padding-top: 10px;
+          font-weight: bold;
         }
         .footer { 
           text-align: center; 
-          margin-top: 30px; 
+          margin-top: 20px; 
           font-size: 12px;
-          border-top: 1px solid #ccc;
-          padding-top: 10px;
-        }
-        .hash { 
-          font-size: 10px; 
-          word-break: break-all;
-          margin-top: 10px;
         }
       </style>
     </head>
     <body>
       <div class="header">
-        <div class="title">🚀 ROCKET QR</div>
-        <div class="subtitle">Pago Confirmado</div>
-        <div class="subtitle">${new Date(timestamp).toLocaleString('es-AR')}</div>
+        <div class="title">🚀 ROCKETPAY</div>
+        <div class="subtitle">Sistema de Cobro Digital</div>
+        <div class="subtitle">${new Date(timestamp).toLocaleString()}</div>
       </div>
       
-      <div class="row">
-        <span>Servicio:</span>
-        <span>Pago XLM</span>
-      </div>
-      <div class="row">
-        <span>Monto:</span>
-        <span>${amount} XLM</span>
-      </div>
-      <div class="row">
-        <span>Remitente:</span>
-        <span>${sender}</span>
-      </div>
-      <div class="row">
-        <span>Memo:</span>
-        <span>${memo || 'RocketQR_Payment'}</span>
+      <div class="details">
+        <div class="row">
+          <span>Monto:</span>
+          <span>${amount} XLM</span>
+        </div>
+        <div class="row">
+          <span>Remitente:</span>
+          <span>${sender}</span>
+        </div>
+        <div class="row">
+          <span>Hash:</span>
+          <span>${transactionHash}</span>
+        </div>
+        <div class="row">
+          <span>Memo:</span>
+          <span>${memo}</span>
+        </div>
       </div>
       
       <div class="total">
@@ -204,47 +200,38 @@ async function generateInvoice(paymentData) {
       </div>
       
       <div class="footer">
-        <div>✅ PAGO CONFIRMADO</div>
-        <div>Gracias por usar RocketQR</div>
-        <div class="hash">Hash: ${transactionHash}</div>
+        <p>¡Gracias por usar RocketPay!</p>
+        <p>Pago procesado en blockchain Stellar</p>
       </div>
     </body>
     </html>
   `;
-
-  const filename = `invoice_${Date.now()}.png`;
+  
+  const invoiceFilename = `invoice_${Date.now()}.png`;
+  const invoicePath = path.join(__dirname, invoiceFilename);
   
   try {
-    // Usar Puppeteer para convertir HTML a imagen PNG
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setContent(htmlContent);
-    await page.setViewport({ width: 440, height: 600 });
-    
-    // Generar la imagen
-    await page.screenshot({
-      path: filename,
-      type: 'png',
-      fullPage: true
+    await page.screenshot({ 
+      path: invoicePath, 
+      width: 400, 
+      height: 600 
     });
-    
     await browser.close();
-    console.log(`🧾 Factura generada: ${filename}`);
-    return filename;
+    
+    console.log(`📄 Factura generada: ${invoicePath}`);
+    return invoicePath;
   } catch (error) {
     console.error('Error generando factura:', error);
-    // Fallback: crear archivo de texto
-    const textFilename = `invoice_${Date.now()}.txt`;
-    fs.writeFileSync(textFilename, htmlContent);
-    return textFilename;
+    return null;
   }
 }
+*/
 
-// Función para monitorear transacciones Stellar
+// Función para monitorear transacciones Stellar (temporalmente deshabilitada)
+/*
 async function monitorTransactions() {
   try {
     console.log('🔍 Monitoreando transacciones Stellar...');
@@ -267,18 +254,15 @@ async function monitorTransactions() {
         if (pendingPayments.has(paymentKey)) {
           const pendingPayment = pendingPayments.get(paymentKey);
           
-          console.log(`✅ Pago confirmado: ${paymentKey}`);
-          console.log(`💰 Monto: ${payment.amount} XLM`);
-          console.log(`👤 Remitente: ${payment.from}`);
-          console.log(`🔗 Hash: ${payment.transaction_hash}`);
+          console.log(`✅ Pago confirmado: ${payment.amount} XLM de ${payment.from}`);
           
           // Generar factura
           const invoicePath = await generateInvoice({
             amount: payment.amount,
             sender: payment.from,
             transactionHash: payment.transaction_hash,
-            timestamp: new Date(payment.created_at).getTime(),
-            memo: payment.memo || 'RocketQR_Payment'
+            timestamp: new Date().toISOString(),
+            memo: payment.memo
           });
           
           // Enviar notificación al administrador
@@ -290,11 +274,13 @@ async function monitorTransactions() {
       }
     }
   } catch (error) {
-    console.error('Error monitoreando transacciones:', error);
+    console.log('Error monitoreando transacciones:', error.message);
   }
 }
+*/
 
-// Función para enviar notificación de pago confirmado
+// Función para enviar notificación de pago confirmado (temporalmente deshabilitada)
+/*
 async function sendPaymentNotification(pendingPayment, confirmedPayment, invoicePath) {
   try {
     const adminNumber = process.env.ADMIN_PHONE_NUMBER;
@@ -302,52 +288,55 @@ async function sendPaymentNotification(pendingPayment, confirmedPayment, invoice
       console.log('⚠️ ADMIN_PHONE_NUMBER no configurado');
       return;
     }
-    
-    // Formatear número del administrador
-    let formattedAdminNumber = adminNumber;
-    if (adminNumber === '5492235397307') {
-      formattedAdminNumber = '54223155397307';
-    }
-    
+
     // Mensaje de confirmación
-    const confirmationMessage = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n👤 Remitente: ${confirmedPayment.from}\n🔗 Hash: ${confirmedPayment.transaction_hash}\n⏰ Fecha: ${new Date(confirmedPayment.created_at).toLocaleString('es-AR')}\n\n📝 Factura generada y lista para enviar`;
-    
-    // Enviar mensaje de confirmación
+    const message = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n👤 Remitente: ${confirmedPayment.from}\n🔗 Hash: ${confirmedPayment.transaction_hash}\n📅 Fecha: ${new Date().toLocaleString()}\n\n🎉 ¡Pago procesado exitosamente!`;
+
+    // Enviar mensaje de texto
     await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
-      to: formattedAdminNumber,
+      to: adminNumber,
       type: "text",
-      text: { body: confirmationMessage }
+      text: { body: message }
     }, {
       headers: {
         Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
         'Content-Type': 'application/json'
       }
     });
-    
-    // Si hay factura, enviarla también
+
+    console.log(`📱 Notificación enviada al administrador: ${adminNumber}`);
+
+    // Si hay factura, enviarla como imagen
     if (invoicePath && fs.existsSync(invoicePath)) {
-      await sendImageToWhatsApp(
-        process.env.PHONE_NUMBER_ID,
-        formattedAdminNumber,
-        invoicePath,
-        `🧾 Factura - Pago de ${confirmedPayment.amount} XLM`
-      );
+      const formData = new FormData();
+      formData.append('messaging_product', 'whatsapp');
+      formData.append('to', adminNumber);
+      formData.append('type', 'image');
+      formData.append('image', fs.createReadStream(invoicePath));
+
+      await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, formData, {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          ...formData.getHeaders()
+        }
+      });
+
+      console.log(`📄 Factura enviada al administrador`);
       
-      // Limpiar archivo de factura
+      // Limpiar archivo temporal
       setTimeout(() => {
         if (fs.existsSync(invoicePath)) {
           fs.unlinkSync(invoicePath);
         }
       }, 60000); // Eliminar después de 1 minuto
     }
-    
-    console.log('📱 Notificación de pago enviada al administrador');
-    
+
   } catch (error) {
     console.error('Error enviando notificación:', error);
   }
 }
+*/
 
 app.post('/webhook', async (req, res) => {
   const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -371,6 +360,8 @@ app.post('/webhook', async (req, res) => {
       let formattedNumber = sender;
       if (sender === '5492235397307') {
         formattedNumber = '54223155397307';
+      } else if (sender === '5491162216633') {
+        formattedNumber = '541162216633';
       }
 
       console.log(`Enviando respuesta a ${formattedNumber} con monto ${monto}`);
@@ -466,8 +457,8 @@ app.listen(3000, () => {
   console.log('RocketQR bot running on http://localhost:3000');
   
   // Iniciar monitoreo de transacciones cada 30 segundos
-  setInterval(monitorTransactions, 30000);
+  // setInterval(monitorTransactions, 30000); // Deshabilitado temporalmente
   
   // Monitoreo inicial
-  monitorTransactions();
+  // monitorTransactions(); // Deshabilitado temporalmente
 });
