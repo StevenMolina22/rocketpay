@@ -10,9 +10,9 @@ const app = express();
 
 app.use(bodyParser.json());
 
-// Configurar Stellar (temporalmente deshabilitado)
-// const StellarSdk = require('stellar-sdk');
-// const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+// Configurar Stellar
+const StellarSdk = require('stellar-sdk');
+const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
 
 // Almacenar pagos pendientes
@@ -249,8 +249,7 @@ async function generateInvoice(paymentData) {
 }
 */
 
-// Función para monitorear transacciones Stellar (temporalmente deshabilitada)
-/*
+// Función para monitorear transacciones Stellar
 async function monitorTransactions() {
   try {
     console.log('🔍 Monitoreando transacciones Stellar...');
@@ -267,28 +266,38 @@ async function monitorTransactions() {
           payment.to === STELLAR_ADDRESS &&
           payment.asset_type === 'native') { // XLM
 
-        const paymentKey = `${payment.from}_${payment.amount}_RocketQR_Payment`;
+        // Obtener el memo de la transacción
+        const transaction = await server.transactions()
+          .transaction(payment.transaction_hash)
+          .call();
+        
+        const memo = transaction.memo || '';
 
-        // Verificar si es un pago pendiente
-        if (pendingPayments.has(paymentKey)) {
-          const pendingPayment = pendingPayments.get(paymentKey);
+        console.log(`🔍 Revisando pago: ${payment.amount} XLM, memo: "${memo}"`);
 
-          console.log(`✅ Pago confirmado: ${payment.amount} XLM de ${payment.from}`);
+        // Buscar pagos pendientes que coincidan con el monto y memo
+        for (const [paymentKey, pendingPayment] of pendingPayments.entries()) {
+          console.log(`🔍 Comparando con pago pendiente: ${paymentKey}`);
+          console.log(`   - Pending amount: ${pendingPayment.amount}, type: ${typeof pendingPayment.amount}`);
+          console.log(`   - Payment amount: ${payment.amount}, type: ${typeof payment.amount}`);
+          console.log(`   - Pending memo: "${pendingPayment.memo}"`);
+          console.log(`   - Payment memo: "${memo}"`);
+          
+          if (parseFloat(payment.amount) === pendingPayment.amount && 
+              memo === pendingPayment.memo) {
+            
+            console.log(`✅ Pago confirmado: ${payment.amount} XLM de ${payment.from}`);
+            console.log(`📝 Coincide con pago pendiente: ${paymentKey}`);
 
-          // Generar factura
-          const invoicePath = await generateInvoice({
-            amount: payment.amount,
-            sender: payment.from,
-            transactionHash: payment.transaction_hash,
-            timestamp: new Date().toISOString(),
-            memo: payment.memo
-          });
+            // Enviar notificación al cliente
+            await sendPaymentConfirmation(pendingPayment, payment);
 
-          // Enviar notificación al administrador
-          await sendPaymentNotification(pendingPayment, payment, invoicePath);
-
-          // Remover de pagos pendientes
-          pendingPayments.delete(paymentKey);
+            // Remover de pagos pendientes
+            pendingPayments.delete(paymentKey);
+            break; // Solo procesar el primer pago que coincida
+          } else {
+            console.log(`❌ No coincide`);
+          }
         }
       }
     }
@@ -296,25 +305,24 @@ async function monitorTransactions() {
     console.log('Error monitoreando transacciones:', error.message);
   }
 }
-*/
 
-// Función para enviar notificación de pago confirmado (temporalmente deshabilitada)
-/*
-async function sendPaymentNotification(pendingPayment, confirmedPayment, invoicePath) {
+// Función para enviar confirmación de pago al cliente
+async function sendPaymentConfirmation(pendingPayment, confirmedPayment) {
   try {
-    const adminNumber = process.env.ADMIN_PHONE_NUMBER;
-    if (!adminNumber) {
-      console.log('⚠️ ADMIN_PHONE_NUMBER no configurado');
-      return;
+    // Convertir el número al formato correcto
+    let formattedNumber = pendingPayment.sender;
+    if (pendingPayment.sender === "5492235397307") {
+      formattedNumber = "54223155397307";
+    } else if (pendingPayment.sender === "5491162216633") {
+      formattedNumber = "541162216633";
     }
 
-    // Mensaje de confirmación
-    const message = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n👤 Remitente: ${confirmedPayment.from}\n🔗 Hash: ${confirmedPayment.transaction_hash}\n📅 Fecha: ${new Date().toLocaleString()}\n\n🎉 ¡Pago procesado exitosamente!`;
+    const message = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n🔗 Hash: ${confirmedPayment.transaction_hash}\n📅 Fecha: ${new Date().toLocaleString()}\n\n🎉 ¡Pago procesado exitosamente!`;
 
-    // Enviar mensaje de texto
+    // Enviar mensaje de confirmación al cliente
     await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
-      to: adminNumber,
+      to: formattedNumber,
       type: "text",
       text: { body: message }
     }, {
@@ -324,38 +332,12 @@ async function sendPaymentNotification(pendingPayment, confirmedPayment, invoice
       }
     });
 
-    console.log(`📱 Notificación enviada al administrador: ${adminNumber}`);
-
-    // Si hay factura, enviarla como imagen
-    if (invoicePath && fs.existsSync(invoicePath)) {
-      const formData = new FormData();
-      formData.append('messaging_product', 'whatsapp');
-      formData.append('to', adminNumber);
-      formData.append('type', 'image');
-      formData.append('image', fs.createReadStream(invoicePath));
-
-      await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, formData, {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          ...formData.getHeaders()
-        }
-      });
-
-      console.log(`📄 Factura enviada al administrador`);
-
-      // Limpiar archivo temporal
-      setTimeout(() => {
-        if (fs.existsSync(invoicePath)) {
-          fs.unlinkSync(invoicePath);
-        }
-      }, 60000); // Eliminar después de 1 minuto
-    }
+    console.log(`📱 Confirmación enviada al cliente: ${formattedNumber}`);
 
   } catch (error) {
-    console.error('Error enviando notificación:', error);
+    console.error('Error enviando confirmación:', error);
   }
 }
-*/
 
 app.post("/webhook", async (req, res) => {
   const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -482,7 +464,7 @@ app.get("/webhook", (req, res) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  if (mode && token === process.env.VERIFY_TOKEN) {
+  if (mode && token === "rocketqrverify") {
     res.status(200).send(challenge);
   } else {
     res.sendStatus(403);
@@ -493,7 +475,7 @@ app.listen(PORT, () => {
   console.log("RocketQR bot running on ", SERVER_URL);
 
   // Iniciar monitoreo de transacciones cada 30 segundos
-  // setInterval(monitorTransactions, 30000); // Deshabilitado temporalmente
+  setInterval(monitorTransactions, 30000);
 
   // Monitoreo inicial
   // monitorTransactions(); // Deshabilitado temporalmente
