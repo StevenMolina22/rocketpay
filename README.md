@@ -39,8 +39,6 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 - 🏆 Reputación e identidad descentralizada
 - 📦 Generación automática de etiqueta con información para envío de productos
 
----
-
 **RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
 
 ## 📱 Comandos Disponibles
