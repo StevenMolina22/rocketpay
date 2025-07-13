@@ -1,165 +1,68 @@
-// monitor.js
-import StellarSdk from "stellar-sdk";
-import fetch from "node-fetch"; // Necesario para node 18- si no usas global fetch
-import fs from "fs";
+require("dotenv").config();
+const { server } = require("./services/stellar.service");
+const { getPendingPayment, removePendingPayment } = require("./services/payment.service");
+const { sendPaymentConfirmation } = require("./services/whatsapp.service");
 
-const SERVER_URL = process.env.SERVER_URL;
-const NETWORK_URL =
-  process.env.SERVER_URL || "https://horizon-testnet.stellar.org";
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
 
-// Configuración
-const server = new StellarSdk.Horizon.Server(NETWORK_URL);
+/**
+ * Validates an incoming Stellar payment against our pending payments.
+ * @param {object} payment - The payment record from the Stellar stream.
+ */
+async function validatePayment(payment) {
+  // We only care about payments sent to our address
+  if (payment.to !== STELLAR_ADDRESS) {
+    return;
+  }
 
-// Leer la dirección desde la variable de entorno
-const accountToMonitor = process.env.PUBLIC_KEY;
-const pollingIntervalMs = 10_000; // Cada 10 segundos
-
-// Simulación de base de datos en memoria:
-const orders = [
-  {
-    order_id: "ORD843",
-    memo: "ORD843",
-    expectedAmount: "5",
-    assetType: "native",
-    status: "pending",
-    client: {
-      name: "Juan Pérez",
-      whatsappId: "5491123456789",
-    },
-  },
-  // ...
-];
-
-// Función principal de monitoreo
-async function checkPayments() {
   try {
-    console.log(`Checking for payments... ${new Date().toISOString()}`);
+    const transaction = await payment.transaction();
+    const memo = transaction.memo;
 
-    // Obtener los últimos 10 pagos recibidos
-    const payments = await server
-      .payments()
-      .forAccount(accountToMonitor)
-      .order("desc")
-      .limit(10)
-      .call();
+    if (!memo) {
+      console.log(`Ignoring transaction ${transaction.id} (no memo).`);
+      return;
+    }
 
-    for (const record of payments.records) {
-      // Filtrar solo pagos directos o path payments
-      if (
-        record.type !== "payment" &&
-        record.type !== "path_payment_strict_receive"
-      ) {
-        continue;
-      }
+    const pendingPayment = getPendingPayment(memo.toString());
 
-      // Validar que sea recibido por nuestra cuenta
-      if (record.to !== accountToMonitor) {
-        continue;
-      }
+    if (!pendingPayment) {
+      console.log(`No pending payment found for memo: ${memo}`);
+      return;
+    }
 
-      // Obtener el TXID
-      const txId = record.transaction_hash;
-      console.log(txId);
+    // Basic validation: check if the received amount is sufficient
+    if (parseFloat(payment.amount) >= pendingPayment.amount) {
+      console.log(`✅ Payment confirmed for memo ${memo}`);
 
-      // Obtener el memo de la transacción (requiere cargar la transacción)
-      const transaction = await server.transactions().transaction(txId).call();
-      const memo = transaction.memo;
+      // Notify the user
+      await sendPaymentConfirmation(pendingPayment, payment);
 
-      if (!memo) {
-        console.log(`Transacción ${txId} ignorada (sin memo)`);
-        continue;
-      }
-
-      // Buscar la orden en la "DB"
-      const order = orders.find(
-        (o) => o.memo === memo && o.status === "pending",
-      );
-
-      if (!order) {
-        console.log(`No se encontró orden pendiente con memo ${memo}.`);
-        continue;
-      }
-
-      // Validar monto
-      const amountReceived = record.amount;
-      if (parseFloat(amountReceived) < parseFloat(order.expectedAmount)) {
-        console.log(
-          `Monto recibido ${amountReceived} menor al esperado ${order.expectedAmount}.`,
-        );
-        continue;
-      }
-
-      // Validar asset
-      if (order.assetType === "native" && record.asset_type !== "native") {
-        console.log(`Asset recibido diferente al esperado.`);
-        continue;
-      }
-      if (order.assetType !== "native") {
-        if (
-          record.asset_type !== "credit_alphanum4" &&
-          record.asset_type !== "credit_alphanum12"
-        ) {
-          console.log(`Asset recibido no es válido.`);
-          continue;
-        }
-        if (record.asset_code !== order.assetCode) {
-          console.log(
-            `Asset recibido (${record.asset_code}) diferente al esperado (${order.assetCode}).`,
-          );
-          continue;
-        }
-      }
-
-      // Marcar como pagado
-      order.status = "paid";
-      order.txid = txId;
-      order.paidAt = new Date().toISOString();
-
-      console.log(
-        `✅ Pago confirmado para orden ${order.order_id}, cliente ${order.client.name}, TXID ${txId}`,
-      );
-
-      // Aquí puedes notificar a tu bot:
-      await notifyBot(order, txId);
+      // Clean up the pending payment
+      removePendingPayment(memo.toString());
+    } else {
+        console.log(`Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`)
     }
   } catch (error) {
-    console.error(`Error en checkPayments: ${error}`);
+    console.error("Error validating payment:", error);
   }
 }
 
-// Mock de notificación al bot
-async function notifyBot(order, txId) {
-  const payload = {
-    order_id: order.order_id,
-    txid: txId,
-    amount: order.expectedAmount,
-    client_name: order.client.name,
-    whatsapp_id: order.client.whatsappId,
-  };
+/**
+ * Starts the real-time monitoring of Stellar payments.
+ */
+function startMonitoring() {
+  console.log("🛰️  Starting Stellar payment stream...");
 
-  console.log(`Enviando notificación al bot:`, payload);
-
-  try {
-    const res = await fetch(`${SERVER_URL}/payment-confirmed1`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+  server.payments()
+    .forAccount(STELLAR_ADDRESS)
+    .cursor("now")
+    .stream({
+      onmessage: validatePayment,
+      onerror: (error) => {
+        console.error("Error in Stellar stream:", error);
+      },
     });
-
-    if (!res.ok) {
-      console.error(`Error notificando al bot: ${res.statusText}`);
-    } else {
-      console.log(
-        `Notificación enviada correctamente al bot para orden ${order.order_id}`,
-      );
-    }
-  } catch (err) {
-    console.error(`Error en notifyBot: ${err}`);
-  }
 }
 
-// Loop de polling
-setInterval(checkPayments, pollingIntervalMs);
-console.log(
-  `🛰️ Monitor de pagos de Stellar iniciado con polling cada ${pollingIntervalMs / 1000}s`,
-);
+startMonitoring();
