@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
-
+import { startPaymentMonitoring } from "./services/payment-monitor.service";
 import { sendImage, sendTextMessage } from "./services/whatsapp.service";
 import { createPaymentUri, generateQRCode } from "./services/stellar.service";
 import { createPendingPayment } from "./services/payment.service";
@@ -98,5 +98,5 @@ app.get("/webhook", (req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 RocketPay bot running on port ${PORT}`);
-  // The payment validation worker should be started as a separate process
+  startPaymentMonitoring(); // Start the payment monitoring service
 });

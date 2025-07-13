@@ -60,145 +60,6 @@ README.md
 
 # Files
 
-## File: scripts/tunnel.ts
-````typescript
-import { spawn, exec } from "child_process";
-import "dotenv/config";
-
-const PORT = process.env.PORT || "3000";
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
-
-let url: string | null = null;
-let retries = 0;
-const maxRetries = 5;
-
-function startTunnel() {
-  if (retries >= maxRetries) {
-    console.log("❌ Maximum retries reached. Could not establish a tunnel.");
-    return;
-  }
-
-  console.log(
-    `📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`,
-  );
-
-  const lt = spawn("npx", ["localtunnel", "--port", PORT]);
-
-  lt.stdout.on("data", (data: Buffer) => {
-    const output = data.toString();
-
-    if (output.includes("your url is:")) {
-      url = output.split("your url is:")[1].trim();
-      console.log("\n✅ TUNNEL ESTABLISHED SUCCESSFULLY");
-      console.log("=".repeat(60));
-      console.log("🌐 Webhook URL:");
-      console.log(`   ${url}/webhook`);
-      console.log("\n🔑 Verify Token:");
-      console.log(`   ${VERIFY_TOKEN}`);
-      console.log("\n📋 Configuration for Meta Developer Console:");
-      console.log("1. Go to https://developers.facebook.com/");
-      console.log("2. Your App → WhatsApp → API Setup");
-      console.log(`3. Webhook URL: ${url}/webhook/`);
-      console.log(`4. Verify Token: ${VERIFY_TOKEN}`);
-      console.log("5. Select: messages");
-      console.log('6. Click "Verify and Save"');
-      console.log("=".repeat(60));
-
-      // Test the webhook
-      setTimeout(() => {
-        exec(
-          `curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`,
-          (error: any, stdout: string, stderr: string) => {
-            if (error) {
-              console.log("❌ Error testing webhook:", error.message);
-            } else {
-              console.log("✅ Webhook is responding correctly.");
-              console.log(
-                "📱 Ready to configure in the Meta Developer Console!",
-              );
-            }
-          },
-        );
-      }, 3000);
-    }
-  });
-
-  lt.stderr.on("data", (data: Buffer) => {
-    const error = data.toString();
-    if (
-      error.includes("connection refused") ||
-      error.includes("tunnel unavailable")
-    ) {
-      console.log("❌ Connection error, retrying...");
-      lt.kill();
-    }
-  });
-
-  lt.on("close", (code: number) => {
-    if (code !== 0 && !url) {
-      console.log(" Tunnel closed unexpectedly, retrying...");
-      retries++;
-      setTimeout(startTunnel, 2000);
-    }
-  });
-}
-
-startTunnel();
-````
-
-## File: src/services/payment.service.ts
-````typescript
-import { randomBytes } from 'crypto';
-
-// In-memory store for pending payments. Replace with a database for production.
-interface PendingPayment {
-  sender: string;
-  amount: number;
-  timestamp: number;
-}
-
-// In-memory store for pending payments. Replace with a database for production.
-const pendingPayments = new Map<string, PendingPayment>();
-
-/**
- * Creates a new pending payment and returns a unique memo.
- * @param {string} sender - The sender's WhatsApp ID.
- * @param {number} amount - The payment amount.
- * @returns {string} A unique memo for the transaction.
- */
-export function createPendingPayment(sender: string, amount: number): string {
-  const memo = randomBytes(8).toString('hex'); // 16 characters
-  const paymentKey = memo; // Use memo as the unique key
-
-  pendingPayments.set(paymentKey, {
-    sender,
-    amount,
-    timestamp: Date.now(),
-  });
-
-  console.log(`📝 Pago pendiente registrado: ${paymentKey}`);
-  return memo;
-}
-
-/**
- * Retrieves a pending payment by its memo.
- * @param {string} memo - The transaction memo.
- * @returns {object | undefined} The pending payment object or undefined if not found.
- */
-export function getPendingPayment(memo: string): PendingPayment | undefined {
-  return pendingPayments.get(memo);
-}
-
-/**
- * Removes a pending payment by its memo.
- * @param {string} memo - The transaction memo.
- */
-export function removePendingPayment(memo: string): void {
-  pendingPayments.delete(memo);
-  console.log(`🗑️ Pago pendiente eliminado: ${memo}`);
-}
-````
-
 ## File: src/services/stellar.service.ts
 ````typescript
 import * as StellarSdk from "@stellar/stellar-sdk";
@@ -649,11 +510,154 @@ export interface OutboundImageMessage {
 }
 ````
 
+## File: scripts/tunnel.ts
+````typescript
+import { spawn, exec } from "child_process";
+import "dotenv/config";
+
+const PORT = process.env.PORT || "3000";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
+
+let url: string | null = null;
+let retries = 0;
+const maxRetries = 5;
+
+function startTunnel() {
+  if (retries >= maxRetries) {
+    console.log("❌ Maximum retries reached. Could not establish a tunnel.");
+    return;
+  }
+
+  console.log(
+    `📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`,
+  );
+
+  const lt = spawn("npx", ["localtunnel", "--port", PORT]);
+
+  lt.stdout.on("data", (data: Buffer) => {
+    const output = data.toString();
+
+    if (output.includes("your url is:")) {
+      url = output.split("your url is:")[1].trim();
+      console.log("\n✅ TUNNEL ESTABLISHED SUCCESSFULLY");
+      console.log("=".repeat(60));
+      console.log("🌐 Webhook URL:");
+      console.log(`   ${url}/webhook`);
+      console.log("\n🔑 Verify Token:");
+      console.log(`   ${VERIFY_TOKEN}`);
+      console.log("\n📋 Configuration for Meta Developer Console:");
+      console.log("1. Go to https://developers.facebook.com/");
+      console.log("2. Your App → WhatsApp → API Setup");
+      console.log(`3. Webhook URL: ${url}/webhook/`);
+      console.log(`4. Verify Token: ${VERIFY_TOKEN}`);
+      console.log("5. Select: messages");
+      console.log('6. Click "Verify and Save"');
+      console.log("=".repeat(60));
+
+      // Test the webhook
+      setTimeout(() => {
+        exec(
+          `curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`,
+          (error: any, stdout: string, stderr: string) => {
+            if (error) {
+              console.log("❌ Error testing webhook:", error.message);
+            } else {
+              console.log("✅ Webhook is responding correctly.");
+              console.log(
+                "📱 Ready to configure in the Meta Developer Console!",
+              );
+            }
+          },
+        );
+      }, 3000);
+    }
+  });
+
+  lt.stderr.on("data", (data: Buffer) => {
+    const error = data.toString();
+    if (
+      error.includes("connection refused") ||
+      error.includes("tunnel unavailable")
+    ) {
+      console.log("❌ Connection error, retrying...");
+      lt.kill();
+    }
+  });
+
+  lt.on("close", (code: number) => {
+    if (code !== 0 && !url) {
+      console.log(" Tunnel closed unexpectedly, retrying...");
+      retries++;
+      setTimeout(startTunnel, 2000);
+    }
+  });
+}
+
+startTunnel();
+````
+
+## File: src/services/payment.service.ts
+````typescript
+import { randomBytes } from "crypto";
+
+// In-memory store for pending payments. Replace with a database for production.
+interface PendingPayment {
+  sender: string;
+  amount: number;
+  timestamp: number;
+}
+
+// In-memory store for pending payments. Replace with a database for production.
+const pendingPayments = new Map<string, PendingPayment>();
+
+/**
+ * Creates a new pending payment and returns a unique memo.
+ * @param {string} sender - The sender's WhatsApp ID.
+ * @param {number} amount - The payment amount.
+ * @returns {string} A unique memo for the transaction.
+ */
+export function createPendingPayment(sender: string, amount: number): string {
+  const memo = randomBytes(8).toString("hex"); // 16 characters
+  const paymentKey = memo; // Use memo as the unique key
+
+  pendingPayments.set(paymentKey, {
+    sender,
+    amount,
+    timestamp: Date.now(),
+  });
+
+  console.log(`📝 Pago pendiente registrado: ${paymentKey}`);
+  return memo;
+}
+
+/**
+ * Retrieves a pending payment by its memo.
+ * @param {string} memo - The transaction memo.
+ * @returns {object | undefined} The pending payment object or undefined if not found.
+ */
+export function getPendingPayment(memo: string): PendingPayment | undefined {
+  console.log("Pending payments:", pendingPayments);
+  return pendingPayments.get(memo);
+}
+
+/**
+ * Removes a pending payment by its memo.
+ * @param {string} memo - The transaction memo.
+ */
+export function removePendingPayment(memo: string): void {
+  pendingPayments.delete(memo);
+  console.log(`🗑️ Pago pendiente eliminado: ${memo}`);
+}
+````
+
 ## File: src/workers/payment-validator.ts
 ````typescript
 import "dotenv/config";
 import { server } from "../services/stellar.service";
-import { getPendingPayment, removePendingPayment } from "../services/payment.service";
+import {
+  getPendingPayment,
+  removePendingPayment,
+} from "../services/payment.service";
 import { sendPaymentConfirmation } from "../services/whatsapp.service";
 
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
@@ -664,10 +668,17 @@ const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
  */
 async function validatePayment(payment: any): Promise<void> {
   // We only care about payments sent to our address
+  console.log(`🔍 Processing payment: ${JSON.stringify(payment, null, 2)}`);
+
+  // We only care about payments sent to our address
   if (payment.to !== STELLAR_ADDRESS) {
+    console.log(
+      `❌ Payment not for our address: ${payment.to} (expected: ${STELLAR_ADDRESS})`,
+    );
     return;
   }
 
+  console.log(`✅ Payment is for our address`);
   try {
     const transaction = await payment.transaction();
     const memo = transaction.memo;
@@ -680,6 +691,7 @@ async function validatePayment(payment: any): Promise<void> {
     const pendingPayment = getPendingPayment(memo.toString());
 
     if (!pendingPayment) {
+      console.log();
       console.log(`No pending payment found for memo: ${memo}`);
       return;
     }
@@ -694,7 +706,9 @@ async function validatePayment(payment: any): Promise<void> {
       // Clean up the pending payment
       removePendingPayment(memo.toString());
     } else {
-        console.log(`Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`)
+      console.log(
+        `Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`,
+      );
     }
   } catch (error) {
     console.error("Error validating payment:", error);
@@ -704,18 +718,26 @@ async function validatePayment(payment: any): Promise<void> {
 /**
  * Starts the real-time monitoring of Stellar payments.
  */
+
 function startMonitoring() {
   console.log("🛰️  Starting Stellar payment stream...");
+  console.log(`📍 Monitoring account: ${STELLAR_ADDRESS}`);
 
-  server.payments()
+  const stream = server
+    .payments()
     .forAccount(STELLAR_ADDRESS)
     .cursor("now")
     .stream({
-      onmessage: validatePayment,
+      onmessage: (payment: any) => {
+        console.log("📨 Received payment:", payment);
+        validatePayment(payment);
+      },
       onerror: (error: any) => {
-        console.error("Error in Stellar stream:", error);
+        console.error("❌ Error in Stellar stream:", error);
       },
     });
+
+  console.log("✅ Stream started successfully");
 }
 
 startMonitoring();
@@ -839,6 +861,19 @@ PORT="3000"
 NETWORK_URL="https://horizon-testnet.stellar.org"
 ````
 
+## File: .gitignore
+````
+node_modules
+.env
+qr_*
+dist/
+
+
+.repomixignore
+repomix.config.json
+lt_url.txt
+````
+
 ## File: README.md
 ````markdown
 # 🚀 RocketPay
@@ -940,19 +975,6 @@ npm install
 - **Node.js** - Backend del bot
 - **Express.js** - Servidor web
 - **QRCode** - Generación de códigos QR
-````
-
-## File: .gitignore
-````
-node_modules
-.env
-qr_*
-dist/
-
-
-.repomixignore
-repomix.config.json
-lt_url.txt
 ````
 
 ## File: package.json

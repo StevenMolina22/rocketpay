@@ -32,12 +32,29 @@
 
 ### Phase 5: Project Simplification
 
-- [ ] **Task 5.1:** Create the `scripts/` directory.
-- [ ] **Task 5.2:** Consolidate tunnel scripts into a single `scripts/tunnel.js`.
-- [ ] **Task 5.3:** Delete the old tunnel scripts (`get_current_url.js`, `get_url.js`, `simple_tunnel.js`, `stable_tunnel.js`, `start_tunnel.js`).
-- [ ] **Task 5.4:** Create the `workers/` directory.
-- [ ] **Task 5.5:** Move `validation.js` to `workers/payment-validator.js`.
-- [ ] **Task 5.6:** Add `lt_url.txt` to `.gitignore`.
-- [ ] **Task 5.7:** Add a `tunnel` script to `package.json`.
-- [ ] **Task 5.8:** Update `README.md` with the new project structure and commands.
-- [ ] **Task 5.9:** Update `.agents/` files to reflect the new project structure.
+- [x] **Task 5.1:** Create the `scripts/` directory.
+- [x] **Task 5.2:** Consolidate tunnel scripts into a single `scripts/tunnel.js`.
+- [x] **Task 5.3:** Delete the old tunnel scripts (`get_current_url.js`, `get_url.js`, `simple_tunnel.js`, `stable_tunnel.js`, `start_tunnel.js`).
+- [x] **Task 5.4:** Create the `workers/` directory.
+- [x] **Task 5.5:** Move `validation.js` to `workers/payment-validator.js`.
+- [x] **Task 5.6:** Add `lt_url.txt` to `.gitignore`.
+- [x] **Task 5.7:** Add a `tunnel` script to `package.json`.
+- [x] **Task 5.8:** Update `README.md` with the new project structure and commands.
+- [x] **Task 5.9:** Update `.agents/` files to reflect the new project structure.
+
+### Phase 6: Process Consolidation
+- [x] **Task 6.1:** Create Payment Monitor Service
+- [x] **Task 6.2:** Integrate Monitor into Main Process
+- [x] **Task 6.3:** Remove Worker Files
+- [x] **Task 6.4:** Update Package Scripts
+- [x] **Task 6.5:** Update Development Workflow
+
+### Phase 7: Enhanced Monitoring & Debugging
+- [x] **Task 7.1:** Add Comprehensive Logging
+- [x] **Task 7.2:** Add Connection Testing
+- [x] **Task 7.3:** Improve Payment Flow Logging
+
+### Phase 8: Configuration & Documentation
+- [x] **Task 8.1:** Update Environment Variables Documentation
+- [x] **Task 8.2:** Update Agent Documentation
+- [ ] **Task 8.3:** Update Context Documentation (Will be updated automatically by repomix)

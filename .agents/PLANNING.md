@@ -25,10 +25,31 @@ The current monolith (`index.js`, `validation.js`) will be refactored into a ser
 - **Documentation Update:** The `README.md` will be updated upon completion of the refactor to reflect the new architecture and setup instructions.
 - **Rule Adherence:** All new code will adhere to the principles laid out in `.agents/RULES.md`.
 
-### 3. Project Simplification (Current Phase)
+### 3. Project Simplification (Completed)
 
 - **Objective:** Organize and simplify the project structure to improve clarity and maintainability.
 - **`scripts/` Directory:** Consolidate all tunnel-related scripts into a single, robust `scripts/tunnel.js`. This will remove redundancy and simplify the development setup.
-- **`workers/` Directory:** Create a dedicated directory for background processes. The `validation.js` script will be moved to `workers/payment-validator.js` to better reflect its role.
-- **Configuration:** Update `package.json` with a new `tunnel` script and modify `.gitignore` to exclude temporary files like `lt_url.txt`.
-- **Documentation:** The `README.md` and `.agents/` files will be updated to align with the new, cleaner project structure.
+- **`workers/` Directory:** Removed as part of process consolidation.
+- **Configuration:** Updated `package.json` with a new `tunnel` script and modified `.gitignore` to exclude temporary files like `lt_url.txt`.
+- **Documentation:** The `README.md` and `.agents/` files have been updated to align with the new, cleaner project structure.
+
+### 4. Process Consolidation (Completed)
+
+- **Objective:** Consolidate the dual-process architecture into a single, streamlined process.
+- **Payment Monitor Service:** Extracted payment validation logic into `src/services/payment-monitor.service.ts`.
+- **Integration:** Integrated payment monitoring service into `src/index.ts`.
+- **Worker Removal:** Removed `src/workers/payment-validator.ts` and the `src/workers/` directory.
+- **Package Scripts:** Updated `package.json` to remove `validator` and `validator:dev` scripts.
+- **Development Workflow:** Updated `README.md` to reflect the single-command development workflow.
+
+### 5. Enhanced Monitoring & Debugging (Completed)
+
+- **Comprehensive Logging:** Added startup validation, heartbeat logging, and detailed payment processing logs to `src/services/payment-monitor.service.ts`.
+- **Connection Testing:** Implemented Stellar connection testing and environment variable validation in `src/services/payment-monitor.service.ts`.
+- **Payment Flow Logging:** Improved logging for pending payment creation, total count, and expiration in `src/services/payment.service.ts`.
+
+### 6. Configuration & Documentation (In Progress)
+
+- **Environment Variables Documentation:** Updated `README.md` to document required environment variables.
+- **Agent Documentation:** Updated `.agents/PLANNING.md` and `.agents/TASKS.md` to reflect the new architecture and completed tasks.
+- **Context Documentation:** Will be updated automatically by repomix.

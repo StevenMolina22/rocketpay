@@ -7,8 +7,6 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "validator": "node dist/workers/payment-validator.js",
-    "validator:dev": "ts-node src/workers/payment-validator.ts",
     "tunnel": "ts-node --esm scripts/tunnel.ts"
   },
   "dependencies": {
