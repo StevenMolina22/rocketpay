@@ -43,7 +43,6 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 
 **RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
 
-
 ## 📱 Comandos Disponibles
 
 - `/cobrar [monto]` - Genera un link de pago y QR para el monto especificado
