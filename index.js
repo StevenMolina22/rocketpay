@@ -10,17 +10,18 @@ const app = express();
 
 app.use(bodyParser.json());
 
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000/";
+const PORT = process.env.PORT || "3000";
+const NETWORK_URL =
+  process.env.SERVER_URL || "https://horizon-testnet.stellar.org";
+
 // Configurar Stellar
-const StellarSdk = require('stellar-sdk');
-const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+const StellarSdk = require("stellar-sdk");
+const server = new StellarSdk.Horizon.Server(NETWORK_URL);
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
 
 // Almacenar pagos pendientes
 const pendingPayments = new Map();
-
-const SERVER_URL = process.env.SERVER_URL;
-
-const PORT = process.env.PORT || "3000";
 
 // Función para generar QR code
 async function generateQRCode(data, filename) {
@@ -252,41 +253,55 @@ async function generateInvoice(paymentData) {
 // Función para monitorear transacciones Stellar
 async function monitorTransactions() {
   try {
-    console.log('🔍 Monitoreando transacciones Stellar...');
+    console.log("🔍 Monitoreando transacciones Stellar...");
 
     // Obtener transacciones recientes
-    const payments = await server.payments()
+    const payments = await server
+      .payments()
       .forAccount(STELLAR_ADDRESS)
-      .order('desc')
+      .order("desc")
       .limit(10)
       .call();
 
     for (const payment of payments.records) {
-      if (payment.type === 'payment' &&
-          payment.to === STELLAR_ADDRESS &&
-          payment.asset_type === 'native') { // XLM
+      if (
+        payment.type === "payment" &&
+        payment.to === STELLAR_ADDRESS &&
+        payment.asset_type === "native"
+      ) {
+        // XLM
 
         // Obtener el memo de la transacción
-        const transaction = await server.transactions()
+        const transaction = await server
+          .transactions()
           .transaction(payment.transaction_hash)
           .call();
-        
-        const memo = transaction.memo || '';
 
-        console.log(`🔍 Revisando pago: ${payment.amount} XLM, memo: "${memo}"`);
+        const memo = transaction.memo || "";
+
+        console.log(
+          `🔍 Revisando pago: ${payment.amount} XLM, memo: "${memo}"`,
+        );
 
         // Buscar pagos pendientes que coincidan con el monto y memo
         for (const [paymentKey, pendingPayment] of pendingPayments.entries()) {
           console.log(`🔍 Comparando con pago pendiente: ${paymentKey}`);
-          console.log(`   - Pending amount: ${pendingPayment.amount}, type: ${typeof pendingPayment.amount}`);
-          console.log(`   - Payment amount: ${payment.amount}, type: ${typeof payment.amount}`);
+          console.log(
+            `   - Pending amount: ${pendingPayment.amount}, type: ${typeof pendingPayment.amount}`,
+          );
+          console.log(
+            `   - Payment amount: ${payment.amount}, type: ${typeof payment.amount}`,
+          );
           console.log(`   - Pending memo: "${pendingPayment.memo}"`);
           console.log(`   - Payment memo: "${memo}"`);
-          
-          if (parseFloat(payment.amount) === pendingPayment.amount && 
-              memo === pendingPayment.memo) {
-            
-            console.log(`✅ Pago confirmado: ${payment.amount} XLM de ${payment.from}`);
+
+          if (
+            parseFloat(payment.amount) === pendingPayment.amount &&
+            memo === pendingPayment.memo
+          ) {
+            console.log(
+              `✅ Pago confirmado: ${payment.amount} XLM de ${payment.from}`,
+            );
             console.log(`📝 Coincide con pago pendiente: ${paymentKey}`);
 
             // Enviar notificación al cliente
@@ -302,7 +317,7 @@ async function monitorTransactions() {
       }
     }
   } catch (error) {
-    console.log('Error monitoreando transacciones:', error.message);
+    console.log("Error monitoreando transacciones:", error.message);
   }
 }
 
@@ -320,22 +335,25 @@ async function sendPaymentConfirmation(pendingPayment, confirmedPayment) {
     const message = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n🔗 Hash: ${confirmedPayment.transaction_hash}\n📅 Fecha: ${new Date().toLocaleString()}\n\n🎉 ¡Pago procesado exitosamente!`;
 
     // Enviar mensaje de confirmación al cliente
-    await axios.post(`https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`, {
-      messaging_product: "whatsapp",
-      to: formattedNumber,
-      type: "text",
-      text: { body: message }
-    }, {
-      headers: {
-        Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: formattedNumber,
+        type: "text",
+        text: { body: message },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
 
     console.log(`📱 Confirmación enviada al cliente: ${formattedNumber}`);
-
   } catch (error) {
-    console.error('Error enviando confirmación:', error);
+    console.error("Error enviando confirmación:", error);
   }
 }
 

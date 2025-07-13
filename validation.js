@@ -3,12 +3,12 @@ import StellarSdk from "stellar-sdk";
 import fetch from "node-fetch"; // Necesario para node 18- si no usas global fetch
 import fs from "fs";
 
-// Configuración
-const server = new StellarSdk.Horizon.Server(
-  "https://horizon-testnet.stellar.org",
-);
-
 const SERVER_URL = process.env.SERVER_URL;
+const NETWORK_URL =
+  process.env.SERVER_URL || "https://horizon-testnet.stellar.org";
+
+// Configuración
+const server = new StellarSdk.Horizon.Server(NETWORK_URL);
 
 // Leer la dirección desde la variable de entorno
 const accountToMonitor = process.env.PUBLIC_KEY;
