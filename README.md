@@ -52,4 +52,3 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 - **Node.js** - Backend del bot
 - **Express.js** - Servidor web
 - **QRCode** - Generación de códigos QR
-

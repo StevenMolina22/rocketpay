@@ -62,11 +62,11 @@ README.md
 
 ## File: scripts/tunnel.ts
 ````typescript
-import { spawn, exec } from 'child_process';
+import { spawn, exec } from "child_process";
 import "dotenv/config";
 
-const PORT = process.env.PORT || '3000';
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'rocketqrverify';
+const PORT = process.env.PORT || "3000";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
 
 let url: string | null = null;
 let retries = 0;
@@ -74,59 +74,69 @@ const maxRetries = 5;
 
 function startTunnel() {
   if (retries >= maxRetries) {
-    console.log('❌ Maximum retries reached. Could not establish a tunnel.');
+    console.log("❌ Maximum retries reached. Could not establish a tunnel.");
     return;
   }
 
-  console.log(`📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`);
+  console.log(
+    `📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`,
+  );
 
-  const lt = spawn('npx', ['localtunnel', '--port', PORT]);
+  const lt = spawn("npx", ["localtunnel", "--port", PORT]);
 
-  lt.stdout.on('data', (data: Buffer) => {
+  lt.stdout.on("data", (data: Buffer) => {
     const output = data.toString();
 
-    if (output.includes('your url is:')) {
-      url = output.split('your url is:')[1].trim();
-      console.log('\n✅ TUNNEL ESTABLISHED SUCCESSFULLY');
-      console.log('='.repeat(60));
-      console.log('🌐 Webhook URL:');
+    if (output.includes("your url is:")) {
+      url = output.split("your url is:")[1].trim();
+      console.log("\n✅ TUNNEL ESTABLISHED SUCCESSFULLY");
+      console.log("=".repeat(60));
+      console.log("🌐 Webhook URL:");
       console.log(`   ${url}/webhook`);
-      console.log('\n🔑 Verify Token:');
+      console.log("\n🔑 Verify Token:");
       console.log(`   ${VERIFY_TOKEN}`);
-      console.log('\n📋 Configuration for Meta Developer Console:');
-      console.log('1. Go to https://developers.facebook.com/');
-      console.log('2. Your App → WhatsApp → API Setup');
-      console.log(`3. Webhook URL: ${url}/webhook`);
+      console.log("\n📋 Configuration for Meta Developer Console:");
+      console.log("1. Go to https://developers.facebook.com/");
+      console.log("2. Your App → WhatsApp → API Setup");
+      console.log(`3. Webhook URL: ${url}/webhook/`);
       console.log(`4. Verify Token: ${VERIFY_TOKEN}`);
-      console.log('5. Select: messages');
+      console.log("5. Select: messages");
       console.log('6. Click "Verify and Save"');
-      console.log('='.repeat(60));
+      console.log("=".repeat(60));
 
       // Test the webhook
       setTimeout(() => {
-        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error: any, stdout: string, stderr: string) => {
-          if (error) {
-            console.log('❌ Error testing webhook:', error.message);
-          } else {
-            console.log('✅ Webhook is responding correctly.');
-            console.log('📱 Ready to configure in the Meta Developer Console!');
-          }
-        });
+        exec(
+          `curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`,
+          (error: any, stdout: string, stderr: string) => {
+            if (error) {
+              console.log("❌ Error testing webhook:", error.message);
+            } else {
+              console.log("✅ Webhook is responding correctly.");
+              console.log(
+                "📱 Ready to configure in the Meta Developer Console!",
+              );
+            }
+          },
+        );
       }, 3000);
     }
   });
 
-  lt.stderr.on('data', (data: Buffer) => {
+  lt.stderr.on("data", (data: Buffer) => {
     const error = data.toString();
-    if (error.includes('connection refused') || error.includes('tunnel unavailable')) {
-      console.log('❌ Connection error, retrying...');
+    if (
+      error.includes("connection refused") ||
+      error.includes("tunnel unavailable")
+    ) {
+      console.log("❌ Connection error, retrying...");
       lt.kill();
     }
   });
 
-  lt.on('close', (code: number) => {
+  lt.on("close", (code: number) => {
     if (code !== 0 && !url) {
-      console.log(' Tunnel closed unexpectedly, retrying...');
+      console.log(" Tunnel closed unexpectedly, retrying...");
       retries++;
       setTimeout(startTunnel, 2000);
     }
@@ -728,7 +738,15 @@ app.use(bodyParser.json());
 
 const PORT = process.env.PORT || "3000";
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+
+const formatNumber = (number: string): string => {
+  // Remove the first "9" if the number starts with "549"
+  if (number.startsWith("549")) {
+    return "54" + number.substring(3);
+  }
+  return number;
+};
 
 app.post("/webhook", async (req: Request, res: Response) => {
   const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -736,15 +754,16 @@ app.post("/webhook", async (req: Request, res: Response) => {
   if (msg?.text?.body) {
     const sender = msg.from;
     const body = msg.text.body;
+    const number = formatNumber(sender);
 
-    console.log(`Mensaje recibido de ${sender}: ${body}`);
+    console.log(`Mensaje recibido de ${number}: ${body}`);
 
     if (body.startsWith("/cobrar")) {
-      const amount = parseFloat(body.split(" ")[1]) || 5.0;
-      
+      const amount = parseFloat(body.split(" ")[1]);
+
       try {
         // 1. Create a pending payment and get a unique memo
-        const memo = createPendingPayment(sender, amount);
+        const memo = createPendingPayment(number, amount);
 
         // 2. Create the Stellar payment URI
         const stellarUri = createPaymentUri(STELLAR_ADDRESS, amount, memo);
@@ -755,17 +774,17 @@ app.post("/webhook", async (req: Request, res: Response) => {
 
         if (qrGenerated) {
           const qrPath = path.join(process.cwd(), qrFilename);
-          
+
           // 4. Send QR code and instructions
           await sendImage(
-            sender,
+            number,
             qrPath,
-            `💸 Escanea con tu wallet para pagar ${amount} XLM.`
+            `💸 Escanea con tu wallet para pagar ${amount} XLM.`,
           );
 
           await sendTextMessage(
-            sender,
-            `O usa este link de pago:\n${stellarUri}`
+            number,
+            `O usa este link de pago:\n${stellarUri}`,
           );
 
           // 5. Clean up the QR file
@@ -773,15 +792,15 @@ app.post("/webhook", async (req: Request, res: Response) => {
         } else {
           // Fallback if QR generation fails
           await sendTextMessage(
-            sender,
-            `No se pudo generar el QR. Por favor, usa este link de pago:\n${stellarUri}`
+            number,
+            `No se pudo generar el QR. Por favor, usa este link de pago:\n${stellarUri}`,
           );
         }
       } catch (error) {
         console.error("Error procesando el cobro:", error);
         await sendTextMessage(
-          sender,
-          "Hubo un error al procesar tu solicitud. Por favor, intenta de nuevo."
+          number,
+          "Hubo un error al procesar tu solicitud. Por favor, intenta de nuevo.",
         );
       }
     }
@@ -818,19 +837,6 @@ PHONE_NUMBER_ID=
 SERVER_URL="https://localhost:3000/"
 PORT="3000"
 NETWORK_URL="https://horizon-testnet.stellar.org"
-````
-
-## File: .gitignore
-````
-node_modules
-.env
-qr_*
-dist/
-
-
-.repomixignore
-repomix.config.json
-lt_url.txt
 ````
 
 ## File: README.md
@@ -911,7 +917,7 @@ npm install
 
 2. **Iniciar el validador de pagos (en una terminal separada):**
    ```bash
-   node workers/payment-validator.js
+   npm run validator
    ```
 
 3. **Exponer el puerto a internet (en una tercera terminal):**
@@ -936,18 +942,32 @@ npm install
 - **QRCode** - Generación de códigos QR
 ````
 
+## File: .gitignore
+````
+node_modules
+.env
+qr_*
+dist/
+
+
+.repomixignore
+repomix.config.json
+lt_url.txt
+````
+
 ## File: package.json
 ````json
 {
   "name": "rocketqr-cloudapi",
   "version": "1.0.0",
   "description": "WhatsApp bot for sending USDC payment links using Meta Cloud API",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "ts-node src/index.ts",
+    "validator": "node dist/workers/payment-validator.js",
+    "validator:dev": "ts-node src/workers/payment-validator.ts",
     "tunnel": "ts-node --esm scripts/tunnel.ts"
   },
   "dependencies": {

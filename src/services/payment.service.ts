@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from "crypto";
 
 // In-memory store for pending payments. Replace with a database for production.
 interface PendingPayment {
@@ -17,7 +17,7 @@ const pendingPayments = new Map<string, PendingPayment>();
  * @returns {string} A unique memo for the transaction.
  */
 export function createPendingPayment(sender: string, amount: number): string {
-  const memo = randomBytes(8).toString('hex'); // 16 characters
+  const memo = randomBytes(8).toString("hex"); // 16 characters
   const paymentKey = memo; // Use memo as the unique key
 
   pendingPayments.set(paymentKey, {
@@ -36,6 +36,7 @@ export function createPendingPayment(sender: string, amount: number): string {
  * @returns {object | undefined} The pending payment object or undefined if not found.
  */
 export function getPendingPayment(memo: string): PendingPayment | undefined {
+  console.log("Pending payments:", pendingPayments);
   return pendingPayments.get(memo);
 }
 
@@ -47,4 +48,3 @@ export function removePendingPayment(memo: string): void {
   pendingPayments.delete(memo);
   console.log(`🗑️ Pago pendiente eliminado: ${memo}`);
 }
-

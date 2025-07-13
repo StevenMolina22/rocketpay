@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { server } from "../services/stellar.service";
-import { getPendingPayment, removePendingPayment } from "../services/payment.service";
+import {
+  getPendingPayment,
+  removePendingPayment,
+} from "../services/payment.service";
 import { sendPaymentConfirmation } from "../services/whatsapp.service";
 
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
@@ -11,10 +14,17 @@ const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
  */
 async function validatePayment(payment: any): Promise<void> {
   // We only care about payments sent to our address
+  console.log(`🔍 Processing payment: ${JSON.stringify(payment, null, 2)}`);
+
+  // We only care about payments sent to our address
   if (payment.to !== STELLAR_ADDRESS) {
+    console.log(
+      `❌ Payment not for our address: ${payment.to} (expected: ${STELLAR_ADDRESS})`,
+    );
     return;
   }
 
+  console.log(`✅ Payment is for our address`);
   try {
     const transaction = await payment.transaction();
     const memo = transaction.memo;
@@ -27,6 +37,7 @@ async function validatePayment(payment: any): Promise<void> {
     const pendingPayment = getPendingPayment(memo.toString());
 
     if (!pendingPayment) {
+      console.log();
       console.log(`No pending payment found for memo: ${memo}`);
       return;
     }
@@ -41,7 +52,9 @@ async function validatePayment(payment: any): Promise<void> {
       // Clean up the pending payment
       removePendingPayment(memo.toString());
     } else {
-        console.log(`Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`)
+      console.log(
+        `Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`,
+      );
     }
   } catch (error) {
     console.error("Error validating payment:", error);
@@ -51,18 +64,26 @@ async function validatePayment(payment: any): Promise<void> {
 /**
  * Starts the real-time monitoring of Stellar payments.
  */
+
 function startMonitoring() {
   console.log("🛰️  Starting Stellar payment stream...");
+  console.log(`📍 Monitoring account: ${STELLAR_ADDRESS}`);
 
-  server.payments()
+  const stream = server
+    .payments()
     .forAccount(STELLAR_ADDRESS)
     .cursor("now")
     .stream({
-      onmessage: validatePayment,
+      onmessage: (payment: any) => {
+        console.log("📨 Received payment:", payment);
+        validatePayment(payment);
+      },
       onerror: (error: any) => {
-        console.error("Error in Stellar stream:", error);
+        console.error("❌ Error in Stellar stream:", error);
       },
     });
+
+  console.log("✅ Stream started successfully");
 }
 
 startMonitoring();
