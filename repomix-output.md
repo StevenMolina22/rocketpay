@@ -1,3 +1,360 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+# File Summary
+
+## Purpose
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+## File Format
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+4. Multiple file entries, each consisting of:
+  a. A header with the file path (## File: path/to/file)
+  b. The full contents of the file in a code block
+
+## Usage Guidelines
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+## Notes
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+## Additional Info
+
+# Directory Structure
+```
+.gitignore
+index.js
+package.json
+Procfile
+README.md
+validation.js
+```
+
+# Files
+
+## File: Procfile
+````
+web: node index.js
+worker: node validation.js
+````
+
+## File: .gitignore
+````
+node_modules
+.env
+qr_*
+````
+
+## File: README.md
+````markdown
+# 🚀 RocketPay
+
+**RocketPAY** es un sistema de cobro automatizado vía WhatsApp que permite a trabajadores informales y pequeños comerciantes recibir pagos en XLM (Lumens) de forma simple, sin fricción y con verificación automática en la blockchain de Stellar.
+
+Millones de personas sin acceso a infraestructura bancaria necesitan una forma simple y directa de cobrar digitalmente.
+
+**RocketPAY convierte WhatsApp en una herramienta de cobro.** Con un solo mensaje, el bot genera un link de pago, un código QR y verifica la transacción en Stellar.
+
+## ✨ Características
+
+- **Bot de WhatsApp** con API oficial (WABA)
+- **URI de pago** `web+stellar:pay`
+- **Código QR automático**
+- **Verificación on-chain** vía Horizon
+- **Notificación instantánea**
+- **Generación automática de facturas**
+
+## 🔄 Flujo del Usuario
+
+1. El vendedor escribe a modo de mensaje el comando `/cobrar` y a continuación el monto, como por ejemplo `100` en WhatsApp
+2. El bot responde con el URI de pago y una imagen JPG con un QR
+3. El comprador paga
+4. El bot verifica el pago, notifica al vendedor y le crea una factura para enviarle al comprador
+
+## 💡 ¿Por qué XLM?
+
+- **Rápido** (<5 seg)
+- **Barato** (<0.00001 XLM)
+- **Accesible y global**
+
+## 📊 Estado actual
+
+- ✅ **MVP funcional** con WhatsApp + Stellar
+- 🔄 **En validación** con usuarios reales
+
+## 🚀 Próximos pasos
+
+- 📋 Historial de pagos
+- 🏆 Reputación e identidad descentralizada
+- 📦 Generación automática de etiqueta con información para envío de productos
+
+---
+
+**RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
+
+## 🛠️ Instalación y Configuración
+
+### Requisitos
+- Node.js
+- Cuenta de WhatsApp Business API
+- Dirección Stellar para recibir pagos
+
+### Variables de Entorno
+```env
+WHATSAPP_TOKEN=tu_token_de_whatsapp
+PHONE_NUMBER_ID=tu_phone_number_id
+VERIFY_TOKEN=tu_token_de_verificacion
+ADMIN_PHONE_NUMBER=tu_numero_para_notificaciones
+```
+
+### Instalación
+```bash
+npm install
+node index.js
+```
+
+### Uso
+1. Inicia el bot: `node index.js`
+2. Expón el puerto: `npx localtunnel --port 3000`
+3. Configura el webhook en WhatsApp Business API
+4. Envía `/cobrar [monto]` al bot
+
+## 📱 Comandos Disponibles
+
+- `/cobrar [monto]` - Genera un link de pago y QR para el monto especificado
+
+## 🔗 Tecnologías
+
+- **WhatsApp Business API** - Comunicación con usuarios
+- **Stellar Blockchain** - Procesamiento de pagos
+- **Node.js** - Backend del bot
+- **Express.js** - Servidor web
+- **QRCode** - Generación de códigos QR
+````
+
+## File: package.json
+````json
+{
+  "name": "rocketqr-cloudapi",
+  "version": "1.0.0",
+  "description": "WhatsApp bot for sending USDC payment links using Meta Cloud API",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.3.0",
+    "axios": "^1.6.0",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "form-data": "^4.0.3",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.12.1",
+    "qrcode": "^1.5.4",
+    "stellar-sdk": "^13.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "whatsapp",
+    "stellar",
+    "usdc",
+    "payment",
+    "bot"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+````
+
+## File: validation.js
+````javascript
+// monitor.js
+import StellarSdk from "stellar-sdk";
+import fetch from "node-fetch"; // Necesario para node 18- si no usas global fetch
+import fs from "fs";
+
+// Configuración
+const server = new StellarSdk.Horizon.Server(
+  "https://horizon-testnet.stellar.org",
+);
+
+const SERVER_URL = process.env.SERVER_URL;
+
+// Leer la dirección desde la variable de entorno
+const accountToMonitor = process.env.PUBLIC_KEY;
+const pollingIntervalMs = 10_000; // Cada 10 segundos
+
+// Simulación de base de datos en memoria:
+const orders = [
+  {
+    order_id: "ORD843",
+    memo: "ORD843",
+    expectedAmount: "5",
+    assetType: "native",
+    status: "pending",
+    client: {
+      name: "Juan Pérez",
+      whatsappId: "5491123456789",
+    },
+  },
+  // ...
+];
+
+// Función principal de monitoreo
+async function checkPayments() {
+  try {
+    console.log(`Checking for payments... ${new Date().toISOString()}`);
+
+    // Obtener los últimos 10 pagos recibidos
+    const payments = await server
+      .payments()
+      .forAccount(accountToMonitor)
+      .order("desc")
+      .limit(10)
+      .call();
+
+    for (const record of payments.records) {
+      // Filtrar solo pagos directos o path payments
+      if (
+        record.type !== "payment" &&
+        record.type !== "path_payment_strict_receive"
+      ) {
+        continue;
+      }
+
+      // Validar que sea recibido por nuestra cuenta
+      if (record.to !== accountToMonitor) {
+        continue;
+      }
+
+      // Obtener el TXID
+      const txId = record.transaction_hash;
+      console.log(txId);
+
+      // Obtener el memo de la transacción (requiere cargar la transacción)
+      const transaction = await server.transactions().transaction(txId).call();
+      const memo = transaction.memo;
+
+      if (!memo) {
+        console.log(`Transacción ${txId} ignorada (sin memo)`);
+        continue;
+      }
+
+      // Buscar la orden en la "DB"
+      const order = orders.find(
+        (o) => o.memo === memo && o.status === "pending",
+      );
+
+      if (!order) {
+        console.log(`No se encontró orden pendiente con memo ${memo}.`);
+        continue;
+      }
+
+      // Validar monto
+      const amountReceived = record.amount;
+      if (parseFloat(amountReceived) < parseFloat(order.expectedAmount)) {
+        console.log(
+          `Monto recibido ${amountReceived} menor al esperado ${order.expectedAmount}.`,
+        );
+        continue;
+      }
+
+      // Validar asset
+      if (order.assetType === "native" && record.asset_type !== "native") {
+        console.log(`Asset recibido diferente al esperado.`);
+        continue;
+      }
+      if (order.assetType !== "native") {
+        if (
+          record.asset_type !== "credit_alphanum4" &&
+          record.asset_type !== "credit_alphanum12"
+        ) {
+          console.log(`Asset recibido no es válido.`);
+          continue;
+        }
+        if (record.asset_code !== order.assetCode) {
+          console.log(
+            `Asset recibido (${record.asset_code}) diferente al esperado (${order.assetCode}).`,
+          );
+          continue;
+        }
+      }
+
+      // Marcar como pagado
+      order.status = "paid";
+      order.txid = txId;
+      order.paidAt = new Date().toISOString();
+
+      console.log(
+        `✅ Pago confirmado para orden ${order.order_id}, cliente ${order.client.name}, TXID ${txId}`,
+      );
+
+      // Aquí puedes notificar a tu bot:
+      await notifyBot(order, txId);
+    }
+  } catch (error) {
+    console.error(`Error en checkPayments: ${error}`);
+  }
+}
+
+// Mock de notificación al bot
+async function notifyBot(order, txId) {
+  const payload = {
+    order_id: order.order_id,
+    txid: txId,
+    amount: order.expectedAmount,
+    client_name: order.client.name,
+    whatsapp_id: order.client.whatsappId,
+  };
+
+  console.log(`Enviando notificación al bot:`, payload);
+
+  try {
+    const res = await fetch(`${SERVER_URL}/payment-confirmed1`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.error(`Error notificando al bot: ${res.statusText}`);
+    } else {
+      console.log(
+        `Notificación enviada correctamente al bot para orden ${order.order_id}`,
+      );
+    }
+  } catch (err) {
+    console.error(`Error en notifyBot: ${err}`);
+  }
+}
+
+// Loop de polling
+setInterval(checkPayments, pollingIntervalMs);
+console.log(
+  `🛰️ Monitor de pagos de Stellar iniciado con polling cada ${pollingIntervalMs / 1000}s`,
+);
+````
+
+## File: index.js
+````javascript
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -19,8 +376,6 @@ const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
 const pendingPayments = new Map();
 
 const SERVER_URL = process.env.SERVER_URL;
-
-const PORT = process.env.PORT || "3000";
 
 // Función para generar QR code
 async function generateQRCode(data, filename) {
@@ -489,8 +844,8 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log("RocketQR bot running on ", SERVER_URL);
+app.listen(3000, () => {
+  console.log("RocketQR bot running on http://localhost:3000");
 
   // Iniciar monitoreo de transacciones cada 30 segundos
   // setInterval(monitorTransactions, 30000); // Deshabilitado temporalmente
@@ -498,3 +853,4 @@ app.listen(PORT, () => {
   // Monitoreo inicial
   // monitorTransactions(); // Deshabilitado temporalmente
 });
+````

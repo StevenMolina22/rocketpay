@@ -8,6 +8,8 @@ const server = new StellarSdk.Horizon.Server(
   "https://horizon-testnet.stellar.org",
 );
 
+const SERVER_URL = process.env.SERVER_URL;
+
 // Leer la dirección desde la variable de entorno
 const accountToMonitor = process.env.PUBLIC_KEY;
 const pollingIntervalMs = 10_000; // Cada 10 segundos
@@ -138,7 +140,7 @@ async function notifyBot(order, txId) {
   console.log(`Enviando notificación al bot:`, payload);
 
   try {
-    const res = await fetch("http://localhost:3000/payment-confirmed", {
+    const res = await fetch(`${SERVER_URL}/payment-confirmed1`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
