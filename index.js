@@ -366,10 +366,10 @@ app.post("/webhook", async (req, res) => {
       const monto = parseFloat(body.split(" ")[1]) || 5.0;
 
       // URI Stellar estándar que Lobster reconoce automáticamente para XLM
-      const stellarUri = `web+stellar:pay?destination=GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4&amount=${monto}&memo_type=text&memo=RocketQR_Payment`;
+      const stellarUri = `web+stellar:pay?destination=${STELLAR_ADDRESS}&amount=${monto}&memo_type=text&memo=RocketQR_Payment`;
 
       // Link web que redirige al URI Stellar (para navegadores)
-      const webRedirectUri = `https://stellar.expert/explorer/public/account/GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4?tab=payments&amount=${monto}`;
+      const webRedirectUri = `https://stellar.expert/explorer/public/account/${STELLAR_ADDRESS}?tab=payments&amount=${monto}`;
 
       // Convertir el número al formato que funcionó en curl
       let formattedNumber = sender;
@@ -420,7 +420,7 @@ app.post("/webhook", async (req, res) => {
               to: formattedNumber,
               type: "text",
               text: {
-                body: `💸 URI Stellar (para Lobster):\n${stellarUri}\n\n💰 Monto: ${monto} XLM\n📍 Destino: GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4\n\n📱 Instrucciones:\n1. Copia el URI Stellar\n2. Pégalo en Lobster\n3. O escanea el QR con Lobster`,
+                body: `💸 URI Stellar (para Lobster):\n${stellarUri}\n\n💰 Monto: ${monto} XLM\n📍 Destino: ${STELLAR_ADDRESS}\n\n📱 Instrucciones:\n1. Copia el URI Stellar\n2. Pégalo en Lobster\n3. O escanea el QR con Lobster`,
               },
             },
             {
@@ -444,7 +444,7 @@ app.post("/webhook", async (req, res) => {
               to: formattedNumber,
               type: "text",
               text: {
-                body: `💸 URI Stellar (para Lobster):\n${stellarUri}\n\n💰 Monto: ${monto} XLM\n📍 Destino: GC44BXE3H7GCKN3PZ4VDJIOYB7XOH3C4XLVYG7MFKURMNQLNZKLII5D4\n\n📱 Instrucciones:\n1. Copia el URI Stellar\n2. Pégalo en Lobster\n3. O escanea el QR con Lobster`,
+                body: `💸 URI Stellar (para Lobster):\n${stellarUri}\n\n💰 Monto: ${monto} XLM\n📍 Destino: ${STELLAR_ADDRESS}\n\n📱 Instrucciones:\n1. Copia el URI Stellar\n2. Pégalo en Lobster\n3. O escanea el QR con Lobster`,
               },
             },
             {

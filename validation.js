@@ -1,14 +1,15 @@
 // monitor.js
 import StellarSdk from "stellar-sdk";
 import fetch from "node-fetch"; // Necesario para node 18- si no usas global fetch
+import fs from "fs";
 
 // Configuración
 const server = new StellarSdk.Horizon.Server(
   "https://horizon-testnet.stellar.org",
 );
 
-const accountToMonitor =
-  "GANYV3KMPGVUXDRV76EVFHHYUDAP2VLF5GDESEDH5GAZFYQRMBSGU3CB"; // TU CUENTA DE RECEPCIÓN
+// Leer la dirección desde la variable de entorno
+const accountToMonitor = process.env.PUBLIC_KEY;
 const pollingIntervalMs = 10_000; // Cada 10 segundos
 
 // Simulación de base de datos en memoria:
