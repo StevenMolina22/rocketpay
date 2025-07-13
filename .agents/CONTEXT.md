@@ -36,25 +36,98 @@ The content is organized as follows:
 
 # Directory Structure
 ```
+scripts/
+  tunnel.js
 services/
   payment.service.js
   stellar.service.js
   whatsapp.service.js
+workers/
+  payment-validator.js
 .env.example
 .gitignore
-get_current_url.js
-get_url.js
 index.js
-lt_url.txt
 package.json
 README.md
-simple_tunnel.js
-stable_tunnel.js
-start_tunnel.js
-validation.js
 ```
 
 # Files
+
+## File: scripts/tunnel.js
+````javascript
+const { spawn, exec } = require('child_process');
+require('dotenv').config();
+
+const PORT = process.env.PORT || '3000';
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'rocketqrverify';
+
+let url = null;
+let retries = 0;
+const maxRetries = 5;
+
+function startTunnel() {
+  if (retries >= maxRetries) {
+    console.log('❌ Maximum retries reached. Could not establish a tunnel.');
+    return;
+  }
+
+  console.log(`📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`);
+
+  const lt = spawn('npx', ['localtunnel', '--port', PORT]);
+
+  lt.stdout.on('data', (data) => {
+    const output = data.toString();
+
+    if (output.includes('your url is:')) {
+      url = output.split('your url is:')[1].trim();
+      console.log('\n✅ TUNNEL ESTABLISHED SUCCESSFULLY');
+      console.log('='.repeat(60));
+      console.log('🌐 Webhook URL:');
+      console.log(`   ${url}/webhook`);
+      console.log('\n🔑 Verify Token:');
+      console.log(`   ${VERIFY_TOKEN}`);
+      console.log('\n📋 Configuration for Meta Developer Console:');
+      console.log('1. Go to https://developers.facebook.com/');
+      console.log('2. Your App → WhatsApp → API Setup');
+      console.log(`3. Webhook URL: ${url}/webhook`);
+      console.log(`4. Verify Token: ${VERIFY_TOKEN}`);
+      console.log('5. Select: messages');
+      console.log('6. Click "Verify and Save"');
+      console.log('='.repeat(60));
+
+      // Test the webhook
+      setTimeout(() => {
+        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error, stdout, stderr) => {
+          if (error) {
+            console.log('❌ Error testing webhook:', error.message);
+          } else {
+            console.log('✅ Webhook is responding correctly.');
+            console.log('📱 Ready to configure in the Meta Developer Console!');
+          }
+        });
+      }, 3000);
+    }
+  });
+
+  lt.stderr.on('data', (data) => {
+    const error = data.toString();
+    if (error.includes('connection refused') || error.includes('tunnel unavailable')) {
+      console.log('❌ Connection error, retrying...');
+      lt.kill();
+    }
+  });
+
+  lt.on('close', (code) => {
+    if (code !== 0 && !url) {
+      console.log(' Tunnel closed unexpectedly, retrying...');
+      retries++;
+      setTimeout(startTunnel, 2000);
+    }
+  });
+}
+
+startTunnel();
+````
 
 ## File: services/payment.service.js
 ````javascript
@@ -268,320 +341,76 @@ module.exports = {
 };
 ````
 
-## File: get_current_url.js
+## File: workers/payment-validator.js
 ````javascript
-const { spawn } = require('child_process');
+require("dotenv").config();
+const { server } = require("./services/stellar.service");
+const { getPendingPayment, removePendingPayment } = require("./services/payment.service");
+const { sendPaymentConfirmation } = require("./services/whatsapp.service");
 
-console.log('🔍 Obteniendo URL actual de localtunnel...');
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
 
-// Intentar obtener la URL del API de localtunnel
-const { exec } = require('child_process');
-
-exec('curl -s http://localhost:4040/api/tunnels', (error, stdout, stderr) => {
-  if (error || !stdout) {
-    console.log('❌ No se pudo obtener la URL del API');
-    console.log('💡 Iniciando localtunnel manualmente...');
-    
-    const lt = spawn('npx', ['localtunnel', '--port', '3000']);
-    
-    lt.stdout.on('data', (data) => {
-      const output = data.toString();
-      if (output.includes('your url is:')) {
-        const url = output.split('your url is:')[1].trim();
-        console.log('\n✅ URL OBTENIDA:');
-        console.log('='.repeat(50));
-        console.log('🌐 Webhook URL:');
-        console.log(`${url}/webhook`);
-        console.log('\n🔑 Verify Token:');
-        console.log('RocketQR_2024');
-        console.log('='.repeat(50));
-        
-        // Probar el webhook
-        setTimeout(() => {
-          exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=RocketQR_2024&hub.challenge=test123"`, (error, stdout, stderr) => {
-            if (error) {
-              console.log('❌ Error probando webhook:', error.message);
-            } else {
-              console.log('✅ Webhook funcionando correctamente');
-              console.log('📱 ¡Listo para configurar en Meta Developer Console!');
-            }
-          });
-        }, 2000);
-      }
-    });
-  } else {
-    try {
-      const tunnels = JSON.parse(stdout);
-      if (tunnels.tunnels && tunnels.tunnels.length > 0) {
-        const url = tunnels.tunnels[0].public_url;
-        console.log('\n✅ URL OBTENIDA:');
-        console.log('='.repeat(50));
-        console.log('🌐 Webhook URL:');
-        console.log(`${url}/webhook`);
-        console.log('\n🔑 Verify Token:');
-        console.log('RocketQR_2024');
-        console.log('='.repeat(50));
-        
-        // Probar el webhook
-        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=RocketQR_2024&hub.challenge=test123"`, (error, stdout, stderr) => {
-          if (error) {
-            console.log('❌ Error probando webhook:', error.message);
-          } else {
-            console.log('✅ Webhook funcionando correctamente');
-            console.log('📱 ¡Listo para configurar en Meta Developer Console!');
-          }
-        });
-      }
-    } catch (e) {
-      console.log('❌ Error parseando respuesta del API');
-    }
-  }
-});
-````
-
-## File: get_url.js
-````javascript
-const { spawn } = require('child_process');
-
-console.log('Iniciando localtunnel...');
-
-const lt = spawn('npx', ['localtunnel', '--port', '3000']);
-
-lt.stdout.on('data', (data) => {
-  const output = data.toString();
-  console.log(output);
-  
-  if (output.includes('your url is:')) {
-    const url = output.split('your url is:')[1].trim();
-    console.log('\n🌐 URL del Webhook:');
-    console.log(`${url}/webhook`);
-    console.log('\n🔑 Verify Token:');
-    console.log('RocketQR_2024');
-    
-    // Probar el webhook
-    const { exec } = require('child_process');
-    exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=RocketQR_2024&hub.challenge=test123"`, (error, stdout, stderr) => {
-      if (error) {
-        console.log('❌ Error probando webhook:', error.message);
-      } else {
-        console.log('✅ Webhook funcionando correctamente');
-      }
-    });
-  }
-});
-
-lt.stderr.on('data', (data) => {
-  console.error('Error:', data.toString());
-});
-
-lt.on('close', (code) => {
-  console.log(`Localtunnel terminado con código ${code}`);
-});
-````
-
-## File: lt_url.txt
-````
-your url is: https://legal-cars-pay.loca.lt
-````
-
-## File: simple_tunnel.js
-````javascript
-const { spawn } = require('child_process');
-
-console.log('🚀 Configurando RocketQR Bot...');
-
-// Intentar con diferentes subdominios
-const subdomains = ['rocketqr-bot', 'rocketqr', 'stellar-bot', 'whatsapp-bot'];
-
-function trySubdomain(index) {
-  if (index >= subdomains.length) {
-    console.log('❌ No se pudo establecer conexión con localtunnel');
-    console.log('💡 Intenta usar ngrok o un servicio similar');
+/**
+ * Validates an incoming Stellar payment against our pending payments.
+ * @param {object} payment - The payment record from the Stellar stream.
+ */
+async function validatePayment(payment) {
+  // We only care about payments sent to our address
+  if (payment.to !== STELLAR_ADDRESS) {
     return;
   }
 
-  const subdomain = subdomains[index];
-  console.log(`📡 Intentando con subdominio: ${subdomain}`);
-  
-  const lt = spawn('npx', ['localtunnel', '--port', '3000', '--subdomain', subdomain]);
-  
-  let url = null;
-  
-  lt.stdout.on('data', (data) => {
-    const output = data.toString();
-    console.log(output);
-    
-    if (output.includes('your url is:')) {
-      url = output.split('your url is:')[1].trim();
-      console.log('\n✅ TÚNEL CONFIGURADO EXITOSAMENTE');
-      console.log('='.repeat(50));
-      console.log('🌐 Webhook URL:');
-      console.log(`${url}/webhook`);
-      console.log('\n🔑 Verify Token:');
-      console.log('RocketQR_2024');
-      console.log('\n📋 Configuración para Meta Developer Console:');
-      console.log('1. Ve a https://developers.facebook.com/');
-      console.log('2. Tu app → WhatsApp → API Setup');
-      console.log('3. Webhook URL: ' + url + '/webhook');
-      console.log('4. Verify Token: RocketQR_2024');
-      console.log('5. Selecciona: messages, message_deliveries');
-      console.log('6. Haz clic en "Verify and Save"');
-      console.log('='.repeat(50));
+  try {
+    const transaction = await payment.transaction();
+    const memo = transaction.memo;
+
+    if (!memo) {
+      console.log(`Ignoring transaction ${transaction.id} (no memo).`);
+      return;
     }
-  });
-  
-  lt.stderr.on('data', (data) => {
-    const error = data.toString();
-    if (error.includes('subdomain')) {
-      console.log(`❌ Subdominio ${subdomain} no disponible, probando siguiente...`);
-      lt.kill();
-      setTimeout(() => trySubdomain(index + 1), 1000);
+
+    const pendingPayment = getPendingPayment(memo.toString());
+
+    if (!pendingPayment) {
+      console.log(`No pending payment found for memo: ${memo}`);
+      return;
     }
-  });
-  
-  lt.on('close', (code) => {
-    if (code !== 0 && !url) {
-      setTimeout(() => trySubdomain(index + 1), 1000);
+
+    // Basic validation: check if the received amount is sufficient
+    if (parseFloat(payment.amount) >= pendingPayment.amount) {
+      console.log(`✅ Payment confirmed for memo ${memo}`);
+
+      // Notify the user
+      await sendPaymentConfirmation(pendingPayment, payment);
+
+      // Clean up the pending payment
+      removePendingPayment(memo.toString());
+    } else {
+        console.log(`Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`)
     }
-  });
+  } catch (error) {
+    console.error("Error validating payment:", error);
+  }
 }
 
-trySubdomain(0);
-````
+/**
+ * Starts the real-time monitoring of Stellar payments.
+ */
+function startMonitoring() {
+  console.log("🛰️  Starting Stellar payment stream...");
 
-## File: stable_tunnel.js
-````javascript
-const { spawn } = require('child_process');
-
-console.log('🚀 Iniciando túnel estable para RocketQR...');
-
-let url = null;
-let retries = 0;
-const maxRetries = 5;
-
-function startTunnel() {
-  if (retries >= maxRetries) {
-    console.log('❌ Máximo de intentos alcanzado');
-    return;
-  }
-
-  console.log(`📡 Intento ${retries + 1}/${maxRetries}...`);
-  
-  const lt = spawn('npx', ['localtunnel', '--port', '3000']);
-  
-  lt.stdout.on('data', (data) => {
-    const output = data.toString();
-    
-    if (output.includes('your url is:')) {
-      url = output.split('your url is:')[1].trim();
-      console.log('\n✅ TÚNEL ESTABLE CONFIGURADO');
-      console.log('='.repeat(60));
-      console.log('🌐 Webhook URL:');
-      console.log(`${url}/webhook`);
-      console.log('\n🔑 Verify Token:');
-      console.log('rocketqrverify');
-      console.log('\n📋 Configuración para Meta Developer Console:');
-      console.log('1. Ve a https://developers.facebook.com/');
-      console.log('2. Tu app → WhatsApp → API Setup');
-      console.log('3. Webhook URL: ' + url + '/webhook');
-      console.log('4. Verify Token: rocketqrverify');
-      console.log('5. Selecciona: messages, message_deliveries');
-      console.log('6. Haz clic en "Verify and Save"');
-      console.log('='.repeat(60));
-      
-      // Probar el webhook
-      setTimeout(() => {
-        const { exec } = require('child_process');
-        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=rocketqrverify&hub.challenge=test123"`, (error, stdout, stderr) => {
-          if (error) {
-            console.log('❌ Error probando webhook:', error.message);
-          } else {
-            console.log('✅ Webhook funcionando correctamente');
-            console.log('📱 ¡Listo para configurar en Meta Developer Console!');
-          }
-        });
-      }, 3000);
-    }
-  });
-  
-  lt.stderr.on('data', (data) => {
-    const error = data.toString();
-    if (error.includes('connection refused') || error.includes('tunnel unavailable')) {
-      console.log('❌ Error de conexión, reintentando...');
-      lt.kill();
-      retries++;
-      setTimeout(startTunnel, 2000);
-    }
-  });
-  
-  lt.on('close', (code) => {
-    if (code !== 0 && !url) {
-      console.log('❌ Túnel cerrado inesperadamente, reintentando...');
-      retries++;
-      setTimeout(startTunnel, 2000);
-    }
-  });
+  server.payments()
+    .forAccount(STELLAR_ADDRESS)
+    .cursor("now")
+    .stream({
+      onmessage: validatePayment,
+      onerror: (error) => {
+        console.error("Error in Stellar stream:", error);
+      },
+    });
 }
 
-startTunnel();
-````
-
-## File: start_tunnel.js
-````javascript
-const { spawn } = require('child_process');
-
-console.log('🚀 Iniciando RocketQR Bot...');
-console.log('📡 Configurando túnel público...');
-
-// Iniciar localtunnel
-const lt = spawn('npx', ['localtunnel', '--port', '3000']);
-
-let url = null;
-
-lt.stdout.on('data', (data) => {
-  const output = data.toString();
-  
-  if (output.includes('your url is:')) {
-    url = output.split('your url is:')[1].trim();
-    
-    console.log('\n✅ TÚNEL CONFIGURADO EXITOSAMENTE');
-    console.log('='.repeat(50));
-    console.log('🌐 Webhook URL:');
-    console.log(`${url}/webhook`);
-    console.log('\n🔑 Verify Token:');
-    console.log('RocketQR_2024');
-    console.log('\n📋 Configuración para Meta Developer Console:');
-    console.log('1. Ve a https://developers.facebook.com/');
-    console.log('2. Tu app → WhatsApp → API Setup');
-    console.log('3. Webhook URL: ' + url + '/webhook');
-    console.log('4. Verify Token: RocketQR_2024');
-    console.log('5. Selecciona: messages, message_deliveries');
-    console.log('6. Haz clic en "Verify and Save"');
-    console.log('='.repeat(50));
-    
-    // Probar el webhook
-    setTimeout(() => {
-      const { exec } = require('child_process');
-      exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=RocketQR_2024&hub.challenge=test123"`, (error, stdout, stderr) => {
-        if (error) {
-          console.log('❌ Error probando webhook:', error.message);
-        } else {
-          console.log('✅ Webhook funcionando correctamente');
-          console.log('📱 ¡Listo para recibir mensajes de WhatsApp!');
-        }
-      });
-    }, 2000);
-  }
-});
-
-lt.stderr.on('data', (data) => {
-  console.error('Error:', data.toString());
-});
-
-lt.on('close', (code) => {
-  console.log(`\n❌ Túnel cerrado con código ${code}`);
-  console.log('Reinicia el script si necesitas continuar');
-});
+startMonitoring();
 ````
 
 ## File: .env.example
@@ -605,6 +434,7 @@ qr_*
 
 .repomixignore
 repomix.config.json
+lt_url.txt
 ````
 
 ## File: README.md
@@ -680,17 +510,17 @@ npm install
 
 1. **Iniciar el servidor principal:**
    ```bash
-   node index.js
+   npm start
    ```
 
 2. **Iniciar el validador de pagos (en una terminal separada):**
    ```bash
-   node validation.js
+   node workers/payment-validator.js
    ```
 
 3. **Exponer el puerto a internet (en una tercera terminal):**
    ```bash
-   npx localtunnel --port 3000
+   npm run tunnel
    ```
 
 4. Configura el webhook en tu App de Meta Developers con la URL de localtunnel y tu `VERIFY_TOKEN`.
@@ -719,7 +549,8 @@ npm install
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "tunnel": "node scripts/tunnel.js"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^13.3.0",
@@ -745,78 +576,6 @@ npm install
   "author": "",
   "license": "MIT"
 }
-````
-
-## File: validation.js
-````javascript
-require("dotenv").config();
-const { server } = require("./services/stellar.service");
-const { getPendingPayment, removePendingPayment } = require("./services/payment.service");
-const { sendPaymentConfirmation } = require("./services/whatsapp.service");
-
-const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
-
-/**
- * Validates an incoming Stellar payment against our pending payments.
- * @param {object} payment - The payment record from the Stellar stream.
- */
-async function validatePayment(payment) {
-  // We only care about payments sent to our address
-  if (payment.to !== STELLAR_ADDRESS) {
-    return;
-  }
-
-  try {
-    const transaction = await payment.transaction();
-    const memo = transaction.memo;
-
-    if (!memo) {
-      console.log(`Ignoring transaction ${transaction.id} (no memo).`);
-      return;
-    }
-
-    const pendingPayment = getPendingPayment(memo.toString());
-
-    if (!pendingPayment) {
-      console.log(`No pending payment found for memo: ${memo}`);
-      return;
-    }
-
-    // Basic validation: check if the received amount is sufficient
-    if (parseFloat(payment.amount) >= pendingPayment.amount) {
-      console.log(`✅ Payment confirmed for memo ${memo}`);
-
-      // Notify the user
-      await sendPaymentConfirmation(pendingPayment, payment);
-
-      // Clean up the pending payment
-      removePendingPayment(memo.toString());
-    } else {
-        console.log(`Monto recibido ${payment.amount} menor al esperado ${pendingPayment.amount}.`)
-    }
-  } catch (error) {
-    console.error("Error validating payment:", error);
-  }
-}
-
-/**
- * Starts the real-time monitoring of Stellar payments.
- */
-function startMonitoring() {
-  console.log("🛰️  Starting Stellar payment stream...");
-
-  server.payments()
-    .forAccount(STELLAR_ADDRESS)
-    .cursor("now")
-    .stream({
-      onmessage: validatePayment,
-      onerror: (error) => {
-        console.error("Error in Stellar stream:", error);
-      },
-    });
-}
-
-startMonitoring();
 ````
 
 ## File: index.js

@@ -1,12 +1,12 @@
 
 
-const { spawn, exec } = require('child_process');
-require('dotenv').config();
+import { spawn, exec } from 'child_process';
+import "dotenv/config";
 
 const PORT = process.env.PORT || '3000';
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'rocketqrverify';
 
-let url = null;
+let url: string | null = null;
 let retries = 0;
 const maxRetries = 5;
 
@@ -20,7 +20,7 @@ function startTunnel() {
 
   const lt = spawn('npx', ['localtunnel', '--port', PORT]);
 
-  lt.stdout.on('data', (data) => {
+  lt.stdout.on('data', (data: Buffer) => {
     const output = data.toString();
 
     if (output.includes('your url is:')) {
@@ -42,7 +42,7 @@ function startTunnel() {
 
       // Test the webhook
       setTimeout(() => {
-        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error, stdout, stderr) => {
+        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error: any, stdout: string, stderr: string) => {
           if (error) {
             console.log('❌ Error testing webhook:', error.message);
           } else {
@@ -54,7 +54,7 @@ function startTunnel() {
     }
   });
 
-  lt.stderr.on('data', (data) => {
+  lt.stderr.on('data', (data: Buffer) => {
     const error = data.toString();
     if (error.includes('connection refused') || error.includes('tunnel unavailable')) {
       console.log('❌ Connection error, retrying...');
@@ -62,7 +62,7 @@ function startTunnel() {
     }
   });
 
-  lt.on('close', (code) => {
+  lt.on('close', (code: number) => {
     if (code !== 0 && !url) {
       console.log(' Tunnel closed unexpectedly, retrying...');
       retries++;

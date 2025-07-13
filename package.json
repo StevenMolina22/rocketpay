@@ -2,11 +2,13 @@
   "name": "rocketqr-cloudapi",
   "version": "1.0.0",
   "description": "WhatsApp bot for sending USDC payment links using Meta Cloud API",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "tunnel": "node scripts/tunnel.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node --esm src/index.ts",
+    "tunnel": "ts-node --esm scripts/tunnel.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^13.3.0",
@@ -20,7 +22,16 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.3",
+    "@types/form-data": "^2.2.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.0.13",
+    "@types/qrcode": "^1.5.5",
+    "@types/stellar-sdk": "^0.11.1",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "keywords": [
     "whatsapp",

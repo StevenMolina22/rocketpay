@@ -1,21 +1,21 @@
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const fs = require("fs");
-const path = require("path");
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import bodyParser from "body-parser";
+import fs from "fs";
+import path from "path";
 
-const { sendImage, sendTextMessage } = require("./services/whatsapp.service");
-const { createPaymentUri, generateQRCode } = require("./services/stellar.service");
-const { createPendingPayment } = require("./services/payment.service");
+import { sendImage, sendTextMessage } from "./services/whatsapp.service";
+import { createPaymentUri, generateQRCode } from "./services/stellar.service";
+import { createPendingPayment } from "./services/payment.service";
 
 const app = express();
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || "3000";
-const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
 
-app.post("/webhook", async (req, res) => {
+app.post("/webhook", async (req: Request, res: Response) => {
   const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
   if (msg?.text?.body) {
@@ -39,7 +39,7 @@ app.post("/webhook", async (req, res) => {
         const qrGenerated = await generateQRCode(stellarUri, qrFilename);
 
         if (qrGenerated) {
-          const qrPath = path.join(__dirname, qrFilename);
+          const qrPath = path.join(process.cwd(), qrFilename);
           
           // 4. Send QR code and instructions
           await sendImage(
@@ -75,7 +75,7 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-app.get("/webhook", (req, res) => {
+app.get("/webhook", (req: Request, res: Response) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];

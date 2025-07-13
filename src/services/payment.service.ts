@@ -1,7 +1,14 @@
-const { randomBytes } = require('crypto');
+import { randomBytes } from 'crypto';
 
 // In-memory store for pending payments. Replace with a database for production.
-const pendingPayments = new Map();
+interface PendingPayment {
+  sender: string;
+  amount: number;
+  timestamp: number;
+}
+
+// In-memory store for pending payments. Replace with a database for production.
+const pendingPayments = new Map<string, PendingPayment>();
 
 /**
  * Creates a new pending payment and returns a unique memo.
@@ -9,7 +16,7 @@ const pendingPayments = new Map();
  * @param {number} amount - The payment amount.
  * @returns {string} A unique memo for the transaction.
  */
-function createPendingPayment(sender, amount) {
+export function createPendingPayment(sender: string, amount: number): string {
   const memo = randomBytes(8).toString('hex'); // 16 characters
   const paymentKey = memo; // Use memo as the unique key
 
@@ -28,7 +35,7 @@ function createPendingPayment(sender, amount) {
  * @param {string} memo - The transaction memo.
  * @returns {object | undefined} The pending payment object or undefined if not found.
  */
-function getPendingPayment(memo) {
+export function getPendingPayment(memo: string): PendingPayment | undefined {
   return pendingPayments.get(memo);
 }
 
@@ -36,13 +43,8 @@ function getPendingPayment(memo) {
  * Removes a pending payment by its memo.
  * @param {string} memo - The transaction memo.
  */
-function removePendingPayment(memo) {
+export function removePendingPayment(memo: string): void {
   pendingPayments.delete(memo);
   console.log(`🗑️ Pago pendiente eliminado: ${memo}`);
 }
 
-module.exports = {
-  createPendingPayment,
-  getPendingPayment,
-  removePendingPayment,
-};

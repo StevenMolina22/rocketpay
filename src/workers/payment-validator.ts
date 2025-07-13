@@ -1,15 +1,15 @@
-require("dotenv").config();
-const { server } = require("./services/stellar.service");
-const { getPendingPayment, removePendingPayment } = require("./services/payment.service");
-const { sendPaymentConfirmation } = require("./services/whatsapp.service");
+import "dotenv/config";
+import { server } from "../services/stellar.service";
+import { getPendingPayment, removePendingPayment } from "../services/payment.service";
+import { sendPaymentConfirmation } from "../services/whatsapp.service";
 
-const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
 
 /**
  * Validates an incoming Stellar payment against our pending payments.
  * @param {object} payment - The payment record from the Stellar stream.
  */
-async function validatePayment(payment) {
+async function validatePayment(payment: any): Promise<void> {
   // We only care about payments sent to our address
   if (payment.to !== STELLAR_ADDRESS) {
     return;
@@ -59,7 +59,7 @@ function startMonitoring() {
     .cursor("now")
     .stream({
       onmessage: validatePayment,
-      onerror: (error) => {
+      onerror: (error: any) => {
         console.error("Error in Stellar stream:", error);
       },
     });
