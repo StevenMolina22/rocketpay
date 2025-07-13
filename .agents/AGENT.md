@@ -59,6 +59,8 @@ This document defines how an agent should operate within this project. **Follow 
 - Use `pnpm` on node if possible, except if other package manager is being used.
 - Always use `uv` as a python manager. Run libraries with `uv run ...`.
 - For `python` testing use `assert` when enough or `pytes` when necessary.
+- Always prefer typescript over javascript
+- Always prefer ES-modules in JS
 - Always use function components in `react`.
 - Always use modern type hints in python (3.13+).
 
