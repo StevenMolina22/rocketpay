@@ -43,32 +43,6 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 
 **RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
 
-## 🛠️ Instalación y Configuración
-
-### Requisitos
-- Node.js
-- Cuenta de WhatsApp Business API
-- Dirección Stellar para recibir pagos
-
-### Variables de Entorno
-```env
-WHATSAPP_TOKEN=tu_token_de_whatsapp
-PHONE_NUMBER_ID=tu_phone_number_id
-VERIFY_TOKEN=tu_token_de_verificacion
-ADMIN_PHONE_NUMBER=tu_numero_para_notificaciones
-```
-
-### Instalación
-```bash
-npm install
-node index.js
-```
-
-### Uso
-1. Inicia el bot: `node index.js`
-2. Expón el puerto: `npx localtunnel --port 3000`
-3. Configura el webhook en WhatsApp Business API
-4. Envía `/cobrar [monto]` al bot
 
 ## 📱 Comandos Disponibles
 
