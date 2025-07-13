@@ -37,31 +37,38 @@ The content is organized as follows:
 # Directory Structure
 ```
 scripts/
-  tunnel.js
-services/
-  payment.service.js
-  stellar.service.js
-  whatsapp.service.js
-workers/
-  payment-validator.js
+  tunnel.ts
+src/
+  services/
+    payment.service.ts
+    stellar.service.ts
+    whatsapp.service.ts
+  types/
+    env.d.ts
+    index.ts
+    payment.d.ts
+    stellar.d.ts
+    whatsapp.d.ts
+  workers/
+    payment-validator.ts
+  index.ts
 .env.example
 .gitignore
-index.js
 package.json
 README.md
 ```
 
 # Files
 
-## File: scripts/tunnel.js
-````javascript
-const { spawn, exec } = require('child_process');
-require('dotenv').config();
+## File: scripts/tunnel.ts
+````typescript
+import { spawn, exec } from 'child_process';
+import "dotenv/config";
 
 const PORT = process.env.PORT || '3000';
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'rocketqrverify';
 
-let url = null;
+let url: string | null = null;
 let retries = 0;
 const maxRetries = 5;
 
@@ -75,7 +82,7 @@ function startTunnel() {
 
   const lt = spawn('npx', ['localtunnel', '--port', PORT]);
 
-  lt.stdout.on('data', (data) => {
+  lt.stdout.on('data', (data: Buffer) => {
     const output = data.toString();
 
     if (output.includes('your url is:')) {
@@ -97,7 +104,7 @@ function startTunnel() {
 
       // Test the webhook
       setTimeout(() => {
-        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error, stdout, stderr) => {
+        exec(`curl -X GET "${url}/webhook?hub.mode=subscribe&hub.verify_token=${VERIFY_TOKEN}&hub.challenge=test123"`, (error: any, stdout: string, stderr: string) => {
           if (error) {
             console.log('❌ Error testing webhook:', error.message);
           } else {
@@ -109,7 +116,7 @@ function startTunnel() {
     }
   });
 
-  lt.stderr.on('data', (data) => {
+  lt.stderr.on('data', (data: Buffer) => {
     const error = data.toString();
     if (error.includes('connection refused') || error.includes('tunnel unavailable')) {
       console.log('❌ Connection error, retrying...');
@@ -117,7 +124,7 @@ function startTunnel() {
     }
   });
 
-  lt.on('close', (code) => {
+  lt.on('close', (code: number) => {
     if (code !== 0 && !url) {
       console.log(' Tunnel closed unexpectedly, retrying...');
       retries++;
@@ -129,12 +136,19 @@ function startTunnel() {
 startTunnel();
 ````
 
-## File: services/payment.service.js
-````javascript
-const { randomBytes } = require('crypto');
+## File: src/services/payment.service.ts
+````typescript
+import { randomBytes } from 'crypto';
 
 // In-memory store for pending payments. Replace with a database for production.
-const pendingPayments = new Map();
+interface PendingPayment {
+  sender: string;
+  amount: number;
+  timestamp: number;
+}
+
+// In-memory store for pending payments. Replace with a database for production.
+const pendingPayments = new Map<string, PendingPayment>();
 
 /**
  * Creates a new pending payment and returns a unique memo.
@@ -142,7 +156,7 @@ const pendingPayments = new Map();
  * @param {number} amount - The payment amount.
  * @returns {string} A unique memo for the transaction.
  */
-function createPendingPayment(sender, amount) {
+export function createPendingPayment(sender: string, amount: number): string {
   const memo = randomBytes(8).toString('hex'); // 16 characters
   const paymentKey = memo; // Use memo as the unique key
 
@@ -161,7 +175,7 @@ function createPendingPayment(sender, amount) {
  * @param {string} memo - The transaction memo.
  * @returns {object | undefined} The pending payment object or undefined if not found.
  */
-function getPendingPayment(memo) {
+export function getPendingPayment(memo: string): PendingPayment | undefined {
   return pendingPayments.get(memo);
 }
 
@@ -169,26 +183,20 @@ function getPendingPayment(memo) {
  * Removes a pending payment by its memo.
  * @param {string} memo - The transaction memo.
  */
-function removePendingPayment(memo) {
+export function removePendingPayment(memo: string): void {
   pendingPayments.delete(memo);
   console.log(`🗑️ Pago pendiente eliminado: ${memo}`);
 }
-
-module.exports = {
-  createPendingPayment,
-  getPendingPayment,
-  removePendingPayment,
-};
 ````
 
-## File: services/stellar.service.js
-````javascript
-const StellarSdk = require("stellar-sdk");
-const axios = require("axios");
-const QRCode = require("qrcode");
+## File: src/services/stellar.service.ts
+````typescript
+import * as StellarSdk from "@stellar/stellar-sdk";
+import axios from "axios";
+import * as QRCode from "qrcode";
 
 const NETWORK_URL = process.env.NETWORK_URL || "https://horizon-testnet.stellar.org";
-const server = new StellarSdk.Horizon.Server(NETWORK_URL);
+export const server = new StellarSdk.Horizon.Server(NETWORK_URL);
 
 /**
  * Generates a Stellar payment URI.
@@ -197,7 +205,7 @@ const server = new StellarSdk.Horizon.Server(NETWORK_URL);
  * @param {string} memo - The memo for the transaction.
  * @returns {string} The Stellar payment URI.
  */
-function createPaymentUri(destination, amount, memo) {
+export function createPaymentUri(destination: string, amount: number, memo: string): string {
   return `web+stellar:pay?destination=${destination}&amount=${amount}&memo=${memo}&memo_type=text`;
 }
 
@@ -206,7 +214,7 @@ function createPaymentUri(destination, amount, memo) {
  * @param {string} data - The data to encode in the QR code.
  * @param {string} filename - The path to save the QR code image.
  */
-async function generateQRCode(data, filename) {
+export async function generateQRCode(data: string, filename: string): Promise<boolean> {
   try {
     await QRCode.toFile(filename, data, {
       color: {
@@ -222,19 +230,14 @@ async function generateQRCode(data, filename) {
     return false;
   }
 }
-
-module.exports = {
-  server,
-  createPaymentUri,
-  generateQRCode,
-};
 ````
 
-## File: services/whatsapp.service.js
-````javascript
-const axios = require("axios");
-const fs = require("fs");
-const FormData = require("form-data");
+## File: src/services/whatsapp.service.ts
+````typescript
+import axios from "axios";
+import fs from "fs";
+import FormData from "form-data";
+import { Request, Response } from "express";
 
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
@@ -245,7 +248,7 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
  * @param {string} imagePath - The local path to the image.
  * @param {string} caption - The caption for the image.
  */
-async function sendImage(to, imagePath, caption) {
+export async function sendImage(to: string, imagePath: string, caption: string): Promise<void> {
   try {
     const formData = new FormData();
     formData.append("messaging_product", "whatsapp");
@@ -285,7 +288,7 @@ async function sendImage(to, imagePath, caption) {
   } catch (error) {
     console.error(
       "Error sending image:",
-      error.response?.data || error.message
+      (error as any).response?.data || (error as any).message
     );
     throw error;
   }
@@ -296,7 +299,7 @@ async function sendImage(to, imagePath, caption) {
  * @param {string} to - The recipient's phone number.
  * @param {string} text - The text message to send.
  */
-async function sendTextMessage(to, text) {
+export async function sendTextMessage(to: string, text: string): Promise<void> {
   try {
     await axios.post(
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
@@ -316,7 +319,7 @@ async function sendTextMessage(to, text) {
   } catch (error) {
     console.error(
       "Error sending text message:",
-      error.response?.data || error.message
+      (error as any).response?.data || (error as any).message
     );
     throw error;
   }
@@ -327,34 +330,329 @@ async function sendTextMessage(to, text) {
  * @param {object} pendingPayment - The pending payment information.
  * @param {object} confirmedPayment - The confirmed payment details from Stellar.
  */
-async function sendPaymentConfirmation(pendingPayment, confirmedPayment) {
+export async function sendPaymentConfirmation(pendingPayment: any, confirmedPayment: any): Promise<void> {
     const message = `✅ **PAGO CONFIRMADO**\n\n💰 Monto: ${confirmedPayment.amount} XLM\n🔗 Hash: ${confirmedPayment.transaction_hash}\n📅 Fecha: ${new Date().toLocaleString()}\n\n🎉 ¡Pago procesado exitosamente!`;
     await sendTextMessage(pendingPayment.sender, message);
     console.log(`📱 Confirmación enviada al cliente: ${pendingPayment.sender}`);
 }
-
-
-module.exports = {
-  sendImage,
-  sendTextMessage,
-  sendPaymentConfirmation,
-};
 ````
 
-## File: workers/payment-validator.js
-````javascript
-require("dotenv").config();
-const { server } = require("./services/stellar.service");
-const { getPendingPayment, removePendingPayment } = require("./services/payment.service");
-const { sendPaymentConfirmation } = require("./services/whatsapp.service");
+## File: src/types/env.d.ts
+````typescript
+declare namespace NodeJS {
+  interface ProcessEnv {
+    // WhatsApp API Configuration
+    WHATSAPP_ACCESS_TOKEN: string;
+    WHATSAPP_PHONE_NUMBER_ID: string;
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: string;
+    WHATSAPP_BUSINESS_ACCOUNT_ID: string;
+    
+    // Stellar Network Configuration
+    STELLAR_NETWORK: 'testnet' | 'mainnet';
+    STELLAR_HORIZON_URL: string;
+    STELLAR_SECRET_KEY: string;
+    STELLAR_PUBLIC_KEY: string;
+    
+    // Server Configuration
+    PORT: string;
+    NODE_ENV: 'development' | 'production' | 'test';
+    API_BASE_URL: string;
+    
+    // Database Configuration (if needed)
+    DATABASE_URL?: string;
+    REDIS_URL?: string;
+    
+    // Logging Configuration
+    LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
+    
+    // Security Configuration
+    JWT_SECRET?: string;
+    WEBHOOK_SECRET?: string;
+    
+    // External Services
+    CLOUDINARY_CLOUD_NAME?: string;
+    CLOUDINARY_API_KEY?: string;
+    CLOUDINARY_API_SECRET?: string;
+    
+    // Rate Limiting
+    RATE_LIMIT_WINDOW_MS?: string;
+    RATE_LIMIT_MAX_REQUESTS?: string;
+    
+    // Payment Configuration
+    PAYMENT_TIMEOUT_MS?: string;
+    MAX_PAYMENT_AMOUNT?: string;
+    MIN_PAYMENT_AMOUNT?: string;
+    
+    // Feature Flags
+    ENABLE_WEBHOOK_VALIDATION?: string;
+    ENABLE_RATE_LIMITING?: string;
+    ENABLE_PAYMENT_NOTIFICATIONS?: string;
+  }
+}
 
-const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
+export {};
+````
+
+## File: src/types/index.ts
+````typescript
+// WhatsApp types
+export type {
+  Message,
+  TextMessage,
+  ImageMessage,
+  Contact,
+  WebhookEntry,
+  WebhookPayload,
+  OutboundTextMessage,
+  OutboundImageMessage,
+} from './whatsapp';
+
+// Stellar types
+export type {
+  StellarPayment,
+  StellarTransaction,
+  StellarAccount,
+  StellarAsset,
+  StellarOperationRecord,
+} from './stellar';
+
+// Payment types
+export type {
+  PendingPayment,
+  PaymentRequest,
+  PaymentResponse,
+  PaymentStatus,
+} from './payment';
+
+// Environment types are automatically available through the declaration merge
+// No need to export them explicitly
+````
+
+## File: src/types/payment.d.ts
+````typescript
+export interface PendingPayment {
+  sender: string;
+  amount: number;
+  timestamp: number;
+  memo?: string;
+  recipient?: string;
+  currency?: string;
+  status?: 'pending' | 'processing' | 'completed' | 'failed';
+  transaction_id?: string;
+  expires_at?: number;
+}
+
+export interface PaymentRequest {
+  amount: number;
+  currency: string;
+  memo?: string;
+  recipient: string;
+  sender?: string;
+}
+
+export interface PaymentResponse {
+  success: boolean;
+  transaction_id?: string;
+  error?: string;
+  payment?: PendingPayment;
+}
+
+export interface PaymentStatus {
+  transaction_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  timestamp: number;
+  amount: number;
+  sender: string;
+  recipient: string;
+  memo?: string;
+  error?: string;
+}
+````
+
+## File: src/types/stellar.d.ts
+````typescript
+export interface StellarPayment {
+  amount: string;
+  memo: string | null;
+  to: string;
+  transaction_hash: string;
+  asset_code?: string;
+  asset_issuer?: string;
+  from?: string;
+  created_at?: string;
+  paging_token?: string;
+}
+
+export interface StellarTransaction {
+  transaction_hash: string;
+  amount: string;
+  memo: string | null;
+  to: string;
+  from?: string;
+  created_at?: string;
+  successful?: boolean;
+  fee_charged?: string;
+  operation_count?: number;
+  envelope_xdr?: string;
+  result_xdr?: string;
+  result_meta_xdr?: string;
+  ledger?: number;
+  paging_token?: string;
+}
+
+export interface StellarAccount {
+  account_id: string;
+  sequence: string;
+  subentry_count: number;
+  balances: Array<{
+    balance: string;
+    buying_liabilities: string;
+    selling_liabilities: string;
+    asset_type: string;
+    asset_code?: string;
+    asset_issuer?: string;
+  }>;
+  signers: Array<{
+    weight: number;
+    key: string;
+    type: string;
+  }>;
+  data: Record<string, string>;
+  flags: {
+    auth_required: boolean;
+    auth_revocable: boolean;
+    auth_immutable: boolean;
+    auth_clawback_enabled: boolean;
+  };
+  thresholds: {
+    low_threshold: number;
+    med_threshold: number;
+    high_threshold: number;
+  };
+}
+
+export interface StellarAsset {
+  asset_type: string;
+  asset_code?: string;
+  asset_issuer?: string;
+}
+
+export interface StellarOperationRecord {
+  id: string;
+  type: string;
+  type_i: number;
+  created_at: string;
+  transaction_hash: string;
+  source_account: string;
+  paging_token: string;
+}
+````
+
+## File: src/types/whatsapp.d.ts
+````typescript
+export interface Message {
+  from: string;
+  id: string;
+  timestamp: string;
+  type: string;
+  text?: TextMessage;
+  image?: ImageMessage;
+}
+
+export interface TextMessage {
+  body: string;
+}
+
+export interface ImageMessage {
+  caption?: string;
+  mime_type: string;
+  sha256: string;
+  id: string;
+}
+
+export interface Contact {
+  profile: {
+    name: string;
+  };
+  wa_id: string;
+}
+
+export interface WebhookEntry {
+  id: string;
+  changes: Array<{
+    value: {
+      messaging_product: string;
+      metadata: {
+        display_phone_number: string;
+        phone_number_id: string;
+      };
+      contacts?: Contact[];
+      messages?: Message[];
+      statuses?: Array<{
+        id: string;
+        status: string;
+        timestamp: string;
+        recipient_id: string;
+        conversation?: {
+          id: string;
+          expiration_timestamp?: string;
+          origin: {
+            type: string;
+          };
+        };
+        pricing?: {
+          billable: boolean;
+          pricing_model: string;
+          category: string;
+        };
+      }>;
+    };
+    field: string;
+  }>;
+}
+
+export interface WebhookPayload {
+  object: string;
+  entry: WebhookEntry[];
+}
+
+export interface OutboundTextMessage {
+  messaging_product: string;
+  recipient_type: string;
+  to: string;
+  type: string;
+  text: {
+    preview_url: boolean;
+    body: string;
+  };
+}
+
+export interface OutboundImageMessage {
+  messaging_product: string;
+  recipient_type: string;
+  to: string;
+  type: string;
+  image: {
+    link: string;
+    caption?: string;
+  };
+}
+````
+
+## File: src/workers/payment-validator.ts
+````typescript
+import "dotenv/config";
+import { server } from "../services/stellar.service";
+import { getPendingPayment, removePendingPayment } from "../services/payment.service";
+import { sendPaymentConfirmation } from "../services/whatsapp.service";
+
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
 
 /**
  * Validates an incoming Stellar payment against our pending payments.
  * @param {object} payment - The payment record from the Stellar stream.
  */
-async function validatePayment(payment) {
+async function validatePayment(payment: any): Promise<void> {
   // We only care about payments sent to our address
   if (payment.to !== STELLAR_ADDRESS) {
     return;
@@ -404,13 +702,110 @@ function startMonitoring() {
     .cursor("now")
     .stream({
       onmessage: validatePayment,
-      onerror: (error) => {
+      onerror: (error: any) => {
         console.error("Error in Stellar stream:", error);
       },
     });
 }
 
 startMonitoring();
+````
+
+## File: src/index.ts
+````typescript
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import bodyParser from "body-parser";
+import fs from "fs";
+import path from "path";
+
+import { sendImage, sendTextMessage } from "./services/whatsapp.service";
+import { createPaymentUri, generateQRCode } from "./services/stellar.service";
+import { createPendingPayment } from "./services/payment.service";
+
+const app = express();
+app.use(bodyParser.json());
+
+const PORT = process.env.PORT || "3000";
+const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
+
+app.post("/webhook", async (req: Request, res: Response) => {
+  const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+
+  if (msg?.text?.body) {
+    const sender = msg.from;
+    const body = msg.text.body;
+
+    console.log(`Mensaje recibido de ${sender}: ${body}`);
+
+    if (body.startsWith("/cobrar")) {
+      const amount = parseFloat(body.split(" ")[1]) || 5.0;
+      
+      try {
+        // 1. Create a pending payment and get a unique memo
+        const memo = createPendingPayment(sender, amount);
+
+        // 2. Create the Stellar payment URI
+        const stellarUri = createPaymentUri(STELLAR_ADDRESS, amount, memo);
+
+        // 3. Generate QR code
+        const qrFilename = `qr_${Date.now()}.png`;
+        const qrGenerated = await generateQRCode(stellarUri, qrFilename);
+
+        if (qrGenerated) {
+          const qrPath = path.join(process.cwd(), qrFilename);
+          
+          // 4. Send QR code and instructions
+          await sendImage(
+            sender,
+            qrPath,
+            `💸 Escanea con tu wallet para pagar ${amount} XLM.`
+          );
+
+          await sendTextMessage(
+            sender,
+            `O usa este link de pago:\n${stellarUri}`
+          );
+
+          // 5. Clean up the QR file
+          fs.unlinkSync(qrPath);
+        } else {
+          // Fallback if QR generation fails
+          await sendTextMessage(
+            sender,
+            `No se pudo generar el QR. Por favor, usa este link de pago:\n${stellarUri}`
+          );
+        }
+      } catch (error) {
+        console.error("Error procesando el cobro:", error);
+        await sendTextMessage(
+          sender,
+          "Hubo un error al procesar tu solicitud. Por favor, intenta de nuevo."
+        );
+      }
+    }
+  }
+
+  res.sendStatus(200);
+});
+
+app.get("/webhook", (req: Request, res: Response) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode && token === VERIFY_TOKEN) {
+    res.status(200).send(challenge);
+  } else {
+    res.sendStatus(403);
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 RocketPay bot running on port ${PORT}`);
+  // The payment validation worker should be started as a separate process
+});
 ````
 
 ## File: .env.example
@@ -430,6 +825,7 @@ NETWORK_URL="https://horizon-testnet.stellar.org"
 node_modules
 .env
 qr_*
+dist/
 
 
 .repomixignore
@@ -546,11 +942,13 @@ npm install
   "name": "rocketqr-cloudapi",
   "version": "1.0.0",
   "description": "WhatsApp bot for sending USDC payment links using Meta Cloud API",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "tunnel": "node scripts/tunnel.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node --esm src/index.ts",
+    "tunnel": "ts-node --esm scripts/tunnel.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^13.3.0",
@@ -564,7 +962,16 @@ npm install
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.3",
+    "@types/form-data": "^2.2.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.0.13",
+    "@types/qrcode": "^1.5.5",
+    "@types/stellar-sdk": "^0.11.1",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "keywords": [
     "whatsapp",
@@ -576,101 +983,4 @@ npm install
   "author": "",
   "license": "MIT"
 }
-````
-
-## File: index.js
-````javascript
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const fs = require("fs");
-const path = require("path");
-
-const { sendImage, sendTextMessage } = require("./services/whatsapp.service");
-const { createPaymentUri, generateQRCode } = require("./services/stellar.service");
-const { createPendingPayment } = require("./services/payment.service");
-
-const app = express();
-app.use(bodyParser.json());
-
-const PORT = process.env.PORT || "3000";
-const STELLAR_ADDRESS = process.env.PUBLIC_KEY;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
-
-app.post("/webhook", async (req, res) => {
-  const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-
-  if (msg?.text?.body) {
-    const sender = msg.from;
-    const body = msg.text.body;
-
-    console.log(`Mensaje recibido de ${sender}: ${body}`);
-
-    if (body.startsWith("/cobrar")) {
-      const amount = parseFloat(body.split(" ")[1]) || 5.0;
-      
-      try {
-        // 1. Create a pending payment and get a unique memo
-        const memo = createPendingPayment(sender, amount);
-
-        // 2. Create the Stellar payment URI
-        const stellarUri = createPaymentUri(STELLAR_ADDRESS, amount, memo);
-
-        // 3. Generate QR code
-        const qrFilename = `qr_${Date.now()}.png`;
-        const qrGenerated = await generateQRCode(stellarUri, qrFilename);
-
-        if (qrGenerated) {
-          const qrPath = path.join(__dirname, qrFilename);
-          
-          // 4. Send QR code and instructions
-          await sendImage(
-            sender,
-            qrPath,
-            `💸 Escanea con tu wallet para pagar ${amount} XLM.`
-          );
-
-          await sendTextMessage(
-            sender,
-            `O usa este link de pago:\n${stellarUri}`
-          );
-
-          // 5. Clean up the QR file
-          fs.unlinkSync(qrPath);
-        } else {
-          // Fallback if QR generation fails
-          await sendTextMessage(
-            sender,
-            `No se pudo generar el QR. Por favor, usa este link de pago:\n${stellarUri}`
-          );
-        }
-      } catch (error) {
-        console.error("Error procesando el cobro:", error);
-        await sendTextMessage(
-          sender,
-          "Hubo un error al procesar tu solicitud. Por favor, intenta de nuevo."
-        );
-      }
-    }
-  }
-
-  res.sendStatus(200);
-});
-
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-
-  if (mode && token === VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 RocketPay bot running on port ${PORT}`);
-  // The payment validation worker should be started as a separate process
-});
 ````

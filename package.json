@@ -2,12 +2,11 @@
   "name": "rocketqr-cloudapi",
   "version": "1.0.0",
   "description": "WhatsApp bot for sending USDC payment links using Meta Cloud API",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "ts-node src/index.ts",
     "tunnel": "ts-node --esm scripts/tunnel.ts"
   },
   "dependencies": {
