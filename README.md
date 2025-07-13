@@ -1,4 +1,4 @@
-# 🚀 RocketPay
+# 🚀 RocketPay ChatBot: Transfiere LUMENS con WhatsApp
 
 **RocketPAY** es un sistema de cobro automatizado vía WhatsApp que permite a trabajadores informales y pequeños comerciantes recibir pagos en XLM (Lumens) de forma simple, sin fricción y con verificación automática en la blockchain de Stellar.
 
