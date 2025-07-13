@@ -10,6 +10,7 @@ This document defines how an agent should operate within this project. **Follow 
 - **Check `.agents/TASKS.md`** before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
 - **Check `.agents/RULES.md`** for any rules the project has.
 - **Check `.agents/CONTEXT.md`** for the context and files of the project.
+- **NEVER modify the `.agents/CONTEXT.md`** file.
 - **Use consistent naming conventions, file structure, and architecture patterns** as described in `.agents/PLANNING.md`.
 
 ---

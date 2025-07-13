@@ -29,3 +29,15 @@
 
 - [x] **Task 4.1:** Update `README.md` with new setup instructions if the database or environment variables change.
 - [x] **Task 4.2:** Mark all tasks in this file as complete.
+
+### Phase 5: Project Simplification
+
+- [ ] **Task 5.1:** Create the `scripts/` directory.
+- [ ] **Task 5.2:** Consolidate tunnel scripts into a single `scripts/tunnel.js`.
+- [ ] **Task 5.3:** Delete the old tunnel scripts (`get_current_url.js`, `get_url.js`, `simple_tunnel.js`, `stable_tunnel.js`, `start_tunnel.js`).
+- [ ] **Task 5.4:** Create the `workers/` directory.
+- [ ] **Task 5.5:** Move `validation.js` to `workers/payment-validator.js`.
+- [ ] **Task 5.6:** Add `lt_url.txt` to `.gitignore`.
+- [ ] **Task 5.7:** Add a `tunnel` script to `package.json`.
+- [ ] **Task 5.8:** Update `README.md` with the new project structure and commands.
+- [ ] **Task 5.9:** Update `.agents/` files to reflect the new project structure.

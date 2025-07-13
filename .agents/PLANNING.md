@@ -24,3 +24,11 @@ The current monolith (`index.js`, `validation.js`) will be refactored into a ser
 - **Task-Based Commits:** Each task in `.agents/TASKS.md` will be implemented in a separate, atomic commit.
 - **Documentation Update:** The `README.md` will be updated upon completion of the refactor to reflect the new architecture and setup instructions.
 - **Rule Adherence:** All new code will adhere to the principles laid out in `.agents/RULES.md`.
+
+### 3. Project Simplification (Current Phase)
+
+- **Objective:** Organize and simplify the project structure to improve clarity and maintainability.
+- **`scripts/` Directory:** Consolidate all tunnel-related scripts into a single, robust `scripts/tunnel.js`. This will remove redundancy and simplify the development setup.
+- **`workers/` Directory:** Create a dedicated directory for background processes. The `validation.js` script will be moved to `workers/payment-validator.js` to better reflect its role.
+- **Configuration:** Update `package.json` with a new `tunnel` script and modify `.gitignore` to exclude temporary files like `lt_url.txt`.
+- **Documentation:** The `README.md` and `.agents/` files will be updated to align with the new, cleaner project structure.
