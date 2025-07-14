@@ -15,6 +15,19 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 - **Notificación instantánea**
 - **Generación automática de facturas**
 
+## Ejecutar projecto
+Tener una cuenta developer en meta para hostear el bot
+
+```sh
+    npm run dev
+```
+
+```sh
+    npm run tunnel
+```
+
+Agregar el link del webhook y el token de verificacion a la configuracion en el dashboard
+
 ## 🔄 Flujo del Usuario
 
 1. El vendedor escribe a modo de mensaje el comando `/cobrar` y a continuación el monto, como por ejemplo `100` en WhatsApp
