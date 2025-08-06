@@ -51,6 +51,9 @@ Agregar el link del webhook y el token de verificacion a la configuracion en el 
 - 📋 Historial de pagos
 - 🏆 Reputación e identidad descentralizada
 - 📦 Generación automática de etiqueta con información para envío de productos
+- Conversión de monedas
+- Implementar USDC
+- Galeria de Productos y Comandos
 
 **RocketPAY permite cobrar en cripto desde WhatsApp, sin apps ni bancos. Es simple, rápido y está pensado para quienes más lo necesitan.**
 

@@ -1,18 +1,12 @@
 import "dotenv/config";
 import { server } from "./stellar.service";
-import {
-  getPendingPayment,
-  removePendingPayment,
-} from "./payment.service";
+import { getPendingPayment, removePendingPayment } from "./payment.service";
 import { sendPaymentConfirmation } from "./whatsapp.service";
 
 const STELLAR_ADDRESS = process.env.PUBLIC_KEY!;
-const NETWORK_URL = process.env.NETWORK_URL || "https://horizon-testnet.stellar.org";
+const NETWORK_URL =
+  process.env.NETWORK_URL || "https://horizon-testnet.stellar.org";
 
-/**
- * Validates an incoming Stellar payment against our pending payments.
- * @param {object} payment - The payment record from the Stellar stream.
- */
 export async function validatePayment(payment: any): Promise<void> {
   console.log(`🔍 Processing payment: ${JSON.stringify(payment, null, 2)}`);
 
@@ -41,7 +35,9 @@ export async function validatePayment(payment: any): Promise<void> {
     }
 
     if (parseFloat(payment.amount) >= pendingPayment.amount) {
-      console.log(`✅ Payment confirmed for memo ${memo}. Amount: ${payment.amount}, Expected: ${pendingPayment.amount}`);
+      console.log(
+        `✅ Payment confirmed for memo ${memo}. Amount: ${payment.amount}, Expected: ${pendingPayment.amount}`,
+      );
       await sendPaymentConfirmation(pendingPayment, payment);
       removePendingPayment(memo.toString());
     } else {
@@ -59,7 +55,9 @@ export async function validatePayment(payment: any): Promise<void> {
  */
 export async function startPaymentMonitoring() {
   if (!STELLAR_ADDRESS) {
-    console.error("❌ Stellar PUBLIC_KEY is not set. Payment monitoring cannot start.");
+    console.error(
+      "❌ Stellar PUBLIC_KEY is not set. Payment monitoring cannot start.",
+    );
     return;
   }
 
@@ -70,10 +68,17 @@ export async function startPaymentMonitoring() {
   try {
     // Test connection to Horizon server
     await server.loadAccount(STELLAR_ADDRESS);
-    console.log(`✅ Successfully connected to Stellar Horizon and loaded account ${STELLAR_ADDRESS}.`);
+    console.log(
+      `✅ Successfully connected to Stellar Horizon and loaded account ${STELLAR_ADDRESS}.`,
+    );
   } catch (error) {
-    console.error(`❌ Failed to connect to Stellar Horizon or load account ${STELLAR_ADDRESS}. Error:`, error);
-    console.error("Please ensure PUBLIC_KEY is correct and NETWORK_URL is accessible.");
+    console.error(
+      `❌ Failed to connect to Stellar Horizon or load account ${STELLAR_ADDRESS}. Error:`,
+      error,
+    );
+    console.error(
+      "Please ensure PUBLIC_KEY is correct and NETWORK_URL is accessible.",
+    );
     return;
   }
 
@@ -88,15 +93,14 @@ export async function startPaymentMonitoring() {
       },
       onerror: (error: any) => {
         console.error("❌ Error in Stellar stream:", error);
-        // Implement error recovery mechanisms here, e.g., retry with backoff
+        // TODO! Implement error recovery mechanisms here, e.g., retry with backoff
       },
     });
 
   console.log("✅ Stellar payment stream started successfully.");
 
-  // Add heartbeat logging
+  // Heartbeat logging
   setInterval(() => {
     console.log("❤️ Payment monitor heartbeat: Stream is active.");
   }, 30000); // Log every 30 seconds
 }
-
