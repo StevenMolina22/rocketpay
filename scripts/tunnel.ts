@@ -17,6 +17,7 @@ function startTunnel() {
   console.log(
     `📡 Attempting to start localtunnel (Attempt ${retries + 1}/${maxRetries})...`,
   );
+  console.log("PORT:", PORT);
 
   const lt = spawn("npx", ["localtunnel", "--port", PORT]);
 

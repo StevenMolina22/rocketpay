@@ -50,9 +50,6 @@ export async function validatePayment(payment: any): Promise<void> {
   }
 }
 
-/**
- * Starts the real-time monitoring of Stellar payments.
- */
 export async function startPaymentMonitoring() {
   if (!STELLAR_ADDRESS) {
     console.error(

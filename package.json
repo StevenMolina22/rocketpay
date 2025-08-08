@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "tunnel": "ts-node --esm scripts/tunnel.ts"
+    "tunnel": "ts-node scripts/tunnel.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^13.3.0",
@@ -40,5 +40,6 @@
     "bot"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }

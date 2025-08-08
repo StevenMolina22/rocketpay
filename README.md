@@ -16,15 +16,21 @@ Millones de personas sin acceso a infraestructura bancaria necesitan una forma s
 - **Generación automática de facturas**
 
 ## Ejecutar projecto
-Tener una cuenta developer en meta para hostear el bot
-
+1. Tener una cuenta developer en meta para hostear el bot
+2. Generar Access Token the Whatsapp
+```sh
+    # .env
+    WHATSAPP_TOKEN=your_whatsapp_token
+```
+3. Iniciar el servidor
 ```sh
     npm run dev
 ```
-
+4. Iniciar el servidor de túnel
 ```sh
     npm run tunnel
 ```
+5. Agregar Webhook Callback URL en dashboard de Whatsapp
 
 Agregar el link del webhook y el token de verificacion a la configuracion en el dashboard
 
