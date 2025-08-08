@@ -2,7 +2,7 @@ import { spawn, exec } from "child_process";
 import "dotenv/config";
 
 const PORT = process.env.PORT || "3000";
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rocketqrverify";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN!;
 
 let url: string | null = null;
 let retries = 0;
