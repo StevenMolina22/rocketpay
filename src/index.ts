@@ -96,6 +96,10 @@ app.get("/webhook", (req: Request, res: Response) => {
   }
 });
 
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 RocketPay bot running on port ${PORT}`);
   startPaymentMonitoring(); // Start the payment monitoring service
